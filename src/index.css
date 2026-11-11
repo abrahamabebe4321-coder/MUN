@@ -327,3 +327,17 @@ textarea::placeholder { color: var(--text-muted); }
   :root:not([data-theme='light']) .combo-option.is-active { background: var(--accent); color: var(--accent-contrast); }
 }
 :root[data-theme='dark'] .combo-option.is-active { background: var(--accent); color: var(--accent-contrast); }
+
+.tier-btn.is-selected {
+  color: #fff;
+  border-color: var(--text);
+  box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--text);
+  font-weight: 800;
+}
+.tier-btn.tier-1.is-selected { background: var(--tier-1); }
+.tier-btn.tier-2.is-selected { background: var(--tier-2); }
+.tier-btn.tier-3.is-selected { background: var(--tier-3); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .tier-btn.is-selected { color: #0b1117; }
+}
+:root[data-theme='dark'] .tier-btn.is-selected { color: #0b1117; }

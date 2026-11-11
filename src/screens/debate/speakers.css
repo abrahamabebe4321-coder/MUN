@@ -1,0 +1,13 @@
+.speakers { display: flex; flex-direction: column; gap: var(--s3); }
+.speakers-heading { display: flex; align-items: center; gap: var(--s2); margin: 0; font-size: 1rem; }
+.speakers-subheading { display: flex; align-items: center; gap: var(--s2); margin: 0; font-size: 0.9rem; color: var(--text-muted); }
+.speakers-queue { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--s2); }
+.speakers-item { display: flex; align-items: center; gap: var(--s2); flex-wrap: wrap; }
+.speakers-pos { min-width: 1.5em; text-align: right; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.speakers-name { flex: 1 1 auto; min-width: 0; }
+.speakers-actions { display: flex; align-items: center; gap: var(--s1, 4px); }
+.speakers-yet { display: flex; flex-wrap: wrap; gap: var(--s2); }
+.speakers-chip { font: inherit; color: inherit; background: none; border: 1px dashed var(--border); border-radius: 999px; padding: 2px var(--s2); cursor: pointer; }
+.speakers-chip:hover { background: var(--surface-2); }
+.speakers-spoken summary { cursor: pointer; color: var(--text-muted); }
+.speakers-spoken-list { display: flex; flex-wrap: wrap; gap: var(--s2); margin-top: var(--s2); }

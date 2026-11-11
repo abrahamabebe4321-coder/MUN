@@ -1,0 +1,13 @@
+.speech { display: flex; flex-direction: column; gap: var(--s4); }
+.speech-card { display: flex; flex-direction: column; gap: var(--s3); }
+.speech-controls { display: flex; flex-wrap: wrap; gap: var(--s2); align-items: center; }
+.speech-sound { display: inline-flex; gap: var(--s2); align-items: center; font-size: 0.9rem; }
+.speech-caucus { display: flex; flex-wrap: wrap; gap: var(--s3); align-items: center; }
+.speech-floor { display: flex; align-items: center; gap: var(--s3); flex-wrap: wrap; }
+.speech-rate { display: flex; flex-direction: column; gap: var(--s2); }
+.speech-label { font-weight: 600; font-size: 0.9rem; color: var(--text-muted); }
+.speech-add { display: flex; flex-direction: column; gap: var(--s3); }
+.speech-poi-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--s3); }
+.speech-poi { display: flex; flex-wrap: wrap; gap: var(--s3); align-items: flex-end; padding: var(--s3); border: 1px solid var(--border, currentColor); border-radius: 8px; }
+.speech-poi-group { display: flex; flex-direction: column; gap: var(--s1); min-width: 120px; }
+.speech kbd { font: inherit; font-size: 0.75em; padding: 0 var(--s1); margin-left: var(--s2); border: 1px solid currentColor; border-radius: 4px; }

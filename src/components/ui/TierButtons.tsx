@@ -8,11 +8,13 @@ export function TierButtons({
   points,
   disabled,
   compact,
+  selected,
 }: {
   onPick: (tier: Tier) => void
   points?: (tier: Tier) => number
   disabled?: boolean
   compact?: boolean
+  selected?: Tier | null
 }) {
   return (
     <div className={`tier-buttons${compact ? ' tier-buttons-compact' : ''}`}>
@@ -25,7 +27,8 @@ export function TierButtons({
           <button
             key={tier}
             type="button"
-            className={`tier-btn tier-${tier}`}
+            className={`tier-btn tier-${tier}${selected === tier ? ' is-selected' : ''}`}
+            aria-pressed={selected === undefined ? undefined : selected === tier}
             disabled={disabled}
             aria-label={aria}
             title={label}
