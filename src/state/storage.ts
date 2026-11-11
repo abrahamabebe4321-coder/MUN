@@ -1,0 +1,56 @@
+import type { CommitteeState } from './state';
+
+export const STORAGE_KEY = 'mun-chair:committee:v1';
+
+export function saveState(
+  state: CommitteeState,
+  storage: Pick<Storage, 'setItem'> = localStorage,
+): void {
+  try {
+    storage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch {
+    // storage unavailable or full; ignore
+  }
+}
+
+function isObject(v: unknown): v is Record<string, unknown> {
+  return typeof v === 'object' && v !== null && !Array.isArray(v);
+}
+
+export function parseState(value: unknown): CommitteeState | null {
+  if (!isObject(value)) return null;
+  const v = value;
+  if (v.version !== 1) return null;
+  if (typeof v.name !== 'string' || typeof v.topic !== 'string') return null;
+  if (v.stage !== 'setup' && v.stage !== 'running' && v.stage !== 'ended') return null;
+  if (typeof v.session !== 'number' || typeof v.nextId !== 'number') return null;
+  for (const key of ['delegates', 'interactions', 'motions', 'votes', 'resolutions']) {
+    if (!Array.isArray(v[key])) return null;
+  }
+  if (!isObject(v.scoring) || !isObject(v.debate)) return null;
+  return value as unknown as CommitteeState;
+}
+
+export function loadState(
+  storage: Pick<Storage, 'getItem'> = localStorage,
+): CommitteeState | null {
+  try {
+    const raw = storage.getItem(STORAGE_KEY);
+    if (raw === null) return null;
+    return parseState(JSON.parse(raw));
+  } catch {
+    return null;
+  }
+}
+
+export function exportJson(state: CommitteeState): string {
+  return JSON.stringify(state, null, 2);
+}
+
+export function importJson(text: string): CommitteeState | null {
+  try {
+    return parseState(JSON.parse(text));
+  } catch {
+    return null;
+  }
+}

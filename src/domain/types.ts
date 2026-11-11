@@ -38,6 +38,8 @@ export interface Interaction {
   tier: Tier;
   /** True when the motion/amendment this interaction refers to passed (earns the pass bonus). */
   passed: boolean;
+  /** Id of the Motion or Amendment this interaction refers to, if any. */
+  refId?: string;
   note: string;
   session: number;
   timestamp: number;
