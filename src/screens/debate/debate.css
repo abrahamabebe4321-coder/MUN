@@ -1,0 +1,16 @@
+.debate { display: flex; flex-direction: column; gap: var(--s4); }
+.debate-status { display: flex; flex-direction: column; gap: var(--s3); }
+.debate-status-head { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); flex-wrap: wrap; }
+.debate-status-head h2 { margin: 0; }
+.debate-banner { padding: var(--s2) var(--s3); border-radius: 8px; border: 1px solid currentColor; font-weight: 600; }
+.debate-start { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); }
+.debate-start-label { font-weight: 600; color: var(--text-muted); }
+.debate-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s4); align-items: start; }
+@media (max-width: 1000px) { .debate-grid { grid-template-columns: 1fr; } }
+.debate-unmod { display: flex; flex-direction: column; gap: var(--s4); }
+.debate-unmod-controls { display: flex; flex-wrap: wrap; gap: var(--s2); align-items: center; }
+.debate-leaders { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: var(--s2); }
+.debate-leader { text-align: left; padding: var(--s2) var(--s3); border: 1px solid var(--border, currentColor); border-radius: 8px; background: transparent; color: inherit; cursor: pointer; }
+.debate-leader:hover { background: var(--surface-2, rgba(128, 128, 128, 0.12)); }
+.debate-form { display: flex; flex-direction: column; gap: var(--s3); }
+.debate-warning { font-weight: 600; }

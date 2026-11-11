@@ -1,5 +1,8 @@
 import type { ReactNode } from 'react';
 import { RollCallPanel } from './RollCallPanel';
+import { DebatePanel } from './debate/DebatePanel';
+import { LeaderboardPanel } from './LeaderboardPanel';
+import { SettingsPanel } from './SettingsPanel';
 
 export type TabId = 'debate' | 'motions' | 'resolutions' | 'leaderboard' | 'rollcall' | 'settings';
 
@@ -12,10 +15,10 @@ export function Placeholder({ name }: { name: string }) {
 }
 
 export const TABS: { id: TabId; label: string; render: () => ReactNode }[] = [
-  { id: 'debate', label: 'Debate', render: () => <Placeholder name="Debate" /> },
+  { id: 'debate', label: 'Debate', render: () => <DebatePanel /> },
   { id: 'motions', label: 'Motions & voting', render: () => <Placeholder name="Motions & voting" /> },
   { id: 'resolutions', label: 'Resolutions', render: () => <Placeholder name="Resolutions" /> },
-  { id: 'leaderboard', label: 'Leaderboard', render: () => <Placeholder name="Leaderboard" /> },
+  { id: 'leaderboard', label: 'Leaderboard', render: () => <LeaderboardPanel /> },
   { id: 'rollcall', label: 'Roll call', render: () => <RollCallPanel /> },
-  { id: 'settings', label: 'Settings', render: () => <Placeholder name="Settings" /> },
+  { id: 'settings', label: 'Settings', render: () => <SettingsPanel /> },
 ];

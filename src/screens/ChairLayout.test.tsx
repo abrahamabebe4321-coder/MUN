@@ -55,7 +55,7 @@ describe('ChairLayout', () => {
   it('starts on Debate when someone is present', () => {
     setup(running(true));
     expect(tab('Debate')).toHaveAttribute('aria-selected', 'true');
-    expect(screen.getByRole('tabpanel')).toHaveTextContent('Debate — coming soon');
+    expect(screen.getByRole('region', { name: 'Debate' })).toBeInTheDocument();
   });
 
   it('switches tabs', async () => {
@@ -63,7 +63,7 @@ describe('ChairLayout', () => {
     await user.click(tab('Leaderboard'));
     expect(tab('Leaderboard')).toHaveAttribute('aria-selected', 'true');
     expect(tab('Roll call')).toHaveAttribute('aria-selected', 'false');
-    expect(screen.getByRole('tabpanel')).toHaveTextContent('Leaderboard — coming soon');
+    expect(screen.getByRole('region', { name: 'Leaderboard' })).toBeInTheDocument();
     expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual([
       'Debate',
       'Motions & voting',
