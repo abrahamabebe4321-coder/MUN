@@ -275,9 +275,9 @@ function VoteRow({ v }: { v: VoteRecord }) {
     <li className="list-row motions-item">
       <div className="motions-vote-meta">
         <span className="motions-desc">{v.subject}</span>
-        <span className="tabular">{`For ${v.for} · Against ${v.against} · Abstain ${v.abstain}`}</span>
+        <span className="tabular">{`For ${v.for}, against ${v.against}, abstain ${v.abstain}`}</span>
         <span className="muted">
-          {`${v.procedural ? 'Procedural' : 'Substantive'} · ${v.threshold === 'simple' ? 'Simple majority' : 'Two-thirds'} · Session ${v.session}`}
+          {`${v.procedural ? 'Procedural' : 'Substantive'}, ${v.threshold === 'simple' ? 'simple majority' : 'two-thirds'}, session ${v.session}`}
         </span>
       </div>
       <span className={`motions-status ${v.passed ? 'motions-status-passed' : 'motions-status-failed'}`}>{v.passed ? 'Passed' : 'Failed'}</span>

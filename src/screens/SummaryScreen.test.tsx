@@ -95,7 +95,7 @@ describe('SummaryScreen', () => {
     );
     expect(screen.queryByText(/\b1 points\b/)).not.toBeInTheDocument();
     expect(screen.getAllByText('1 point').length).toBeGreaterThan(0);
-    expect(screen.getByText('Rank 1 · 1 point')).toBeInTheDocument();
+    expect(screen.getByText('Rank 1, 1 point')).toBeInTheDocument();
   });
 
   it('lists the final ranking in order', () => {
@@ -110,7 +110,7 @@ describe('SummaryScreen', () => {
   it('renders a delegate report', () => {
     setup(populated());
     const report = within(screen.getByRole('article', { name: 'Report for Alpha' }));
-    expect(report.getByText('Rank 1 · 20 points')).toBeInTheDocument();
+    expect(report.getByText('Rank 1, 20 points')).toBeInTheDocument();
     expect(report.getByText('GSL speech × 1')).toBeInTheDocument();
     expect(report.getByText('+18')).toBeInTheDocument();
     expect(report.getByText('POI asked × 1')).toBeInTheDocument();

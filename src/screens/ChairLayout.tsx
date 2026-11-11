@@ -51,6 +51,7 @@ export function ChairLayout() {
   return (
     <>
       <div className="chair-header">
+        <div className="chair-inner">
         <header className="chair-topbar">
           <div className="chair-title">
             <span className="chair-name">{state.name}</span>
@@ -107,6 +108,7 @@ export function ChairLayout() {
               {t.label}
             </button>
           ))}
+        </div>
         </div>
       </div>
 

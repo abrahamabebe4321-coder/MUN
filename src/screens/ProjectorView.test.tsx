@@ -104,7 +104,7 @@ describe('ProjectorView', () => {
     const { unmount } = render(<ProjectorView />);
     expect(screen.getByText('Motions on the floor')).toBeInTheDocument();
     const items = screen.getAllByRole('listitem').map((li) => li.textContent ?? '');
-    const motionItems = items.filter((t) => t.includes('—'));
+    const motionItems = items.filter((t) => t.includes('proposed by'));
     expect(motionItems[0]).toContain('Unmoderated caucus');
     expect(motionItems[0]).toContain('Japan');
     expect(motionItems[1]).toContain('General speakers list');
@@ -130,7 +130,7 @@ describe('ProjectorView', () => {
     expect(banner).toHaveClass('is-passed');
     expect(banner).toHaveTextContent('Motion to adjourn');
     expect(banner).toHaveTextContent('PASSED');
-    expect(banner).toHaveTextContent('For 5 · Against 2 · Abstain 1');
+    expect(banner).toHaveTextContent('For 5, against 2, abstain 1');
     unmount();
     saveState(running([{ ...vote, now: T0 - 31_000 } as Action]));
     render(<ProjectorView />);

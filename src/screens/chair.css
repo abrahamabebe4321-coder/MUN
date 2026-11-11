@@ -5,12 +5,17 @@
   background: var(--surface);
   border-bottom: 1px solid var(--border);
 }
+.chair-inner {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 var(--s5);
+}
 .chair-topbar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--s2) var(--s4);
-  padding: var(--s2) var(--s5);
+  padding: var(--s2) 0;
 }
 .chair-title {
   display: flex;
@@ -38,7 +43,6 @@
 .chair-tabs {
   display: flex;
   gap: var(--s5);
-  padding: 0 var(--s5);
   overflow-x: auto;
 }
 .chair-tab {

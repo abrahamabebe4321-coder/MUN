@@ -82,12 +82,12 @@ export function describeMotion(m: Motion): string {
   const label = MOTION_LABELS[m.type];
   switch (m.type) {
     case 'mod':
-      return `${label} on "${m.topic}" — ${fmt(m.totalSeconds)} total, ${fmt(m.speakerSeconds)} per speaker`;
+      return `${label} on "${m.topic}" (${fmt(m.totalSeconds)} total, ${fmt(m.speakerSeconds)} per speaker)`;
     case 'unmod':
     case 'extend':
-      return `${label} — ${fmt(m.totalSeconds)}`;
+      return `${label} (${fmt(m.totalSeconds)})`;
     case 'gsl':
-      return `${label} — ${fmt(m.speakerSeconds)} per speaker`;
+      return `${label} (${fmt(m.speakerSeconds)} per speaker)`;
     case 'set_agenda':
       return `${label} on "${m.topic}"`;
     case 'other':

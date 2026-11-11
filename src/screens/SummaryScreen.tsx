@@ -182,7 +182,7 @@ export function SummaryScreen() {
           </div>
         )}
         <p className="muted summary-note">
-          Suggestions based on points — the final decision is the chair's.
+          Suggestions based on points. The final decision is the chair's.
         </p>
       </section>
 
@@ -235,7 +235,7 @@ export function SummaryScreen() {
             >
               <header>
                 <DelegateChip delegate={d} size={28} />
-                <span className="muted">{`Rank ${d.rank} · ${pointsText(d.total)}`}</span>
+                <span className="muted">{`Rank ${d.rank}, ${pointsText(d.total)}`}</span>
               </header>
               <QualityMix d={d} />
               {d.kinds.length === 0 ? (

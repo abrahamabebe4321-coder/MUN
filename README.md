@@ -4,7 +4,7 @@ MUN Chair is a tool for chairing one Model UN committee. It helps you time debat
 
 ## Features
 
-- Setup with country flags: search for countries, paste a list, or add custom delegations.
+- Setup with country flags: search for countries, or use "More ways to add" to paste a list or add custom delegations.
 - Roll call with present / present and voting, and live majority thresholds.
 - Opening speeches, general speakers list, moderated and unmoderated caucus, with speech and caucus timers.
 - Scoring of speeches, POIs (question, answer, follow-up), motions, points, amendments and penalties, each in three quality tiers.
@@ -38,14 +38,16 @@ Open the address it prints (normally http://localhost:4173). After the first vis
 
 ## Using it during a conference
 
+The chair screen has four tabs: Debate, Motions, Resolutions and Scores. Roll call and Settings are in the "More" menu.
+
 1. Set up the committee and its delegations.
-2. Take roll call on the Roll call tab. Repeat it each session with "Next session".
+2. Take roll call from the "More" menu (or click the attendance count). For each new session, choose "Next session" in the "More" menu.
 3. Open the projector window and move it to the projector screen.
 4. Run opening speeches from the Debate tab.
-5. Log motions on the Motions & voting tab and vote on them in the order shown. A passed caucus starts automatically.
-6. During speeches, rate each speech and log POIs.
+5. Log motions on the Motions tab and vote on them in the order shown. A passed caucus starts automatically.
+6. During speeches, rate each one by clicking one to three pips, and log POIs. Rarely used timer controls are under "Adjust".
 7. Track draft resolutions and amendments on the Resolutions tab.
-8. Press "End conference" to get the summary.
+8. Choose "End conference" in the "More" menu to get the summary.
 
 ## Keyboard shortcuts
 
@@ -84,7 +86,7 @@ Three insightful POIs (18 points) equal one insightful speech. Every value can b
 
 ## Your data
 
-Everything is stored only in that browser, on that laptop. Before you change laptop or clear browser data, use Settings -> Download backup. On the new machine, use Settings -> Restore from backup to load it.
+Everything is stored only in that browser, on that laptop. Before you change laptop or clear browser data, use Settings (in the "More" menu) -> Download backup. On the new machine, use Settings -> Restore from backup to load it.
 
 ## Development
 

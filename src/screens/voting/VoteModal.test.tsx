@@ -141,7 +141,7 @@ describe('VoteModal', () => {
     await user.click(ethiopia.getByRole('radio', { name: 'Abstain' }));
     await user.click(kenya.getByRole('radio', { name: 'For' }));
     expect(screen.getByText('2 of 4 voted')).toBeInTheDocument();
-    expect(status()).toContain('For 1 · Against 0 · Abstain 1');
+    expect(status()).toContain('For 1, against 0, abstain 1');
     await user.click(kenya.getByRole('radio', { name: 'For' }));
     expect(screen.getByText('1 of 4 voted')).toBeInTheDocument();
 

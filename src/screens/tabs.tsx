@@ -8,14 +8,6 @@ import { ResolutionsPanel } from './resolutions/ResolutionsPanel';
 
 export type TabId = 'debate' | 'motions' | 'resolutions' | 'leaderboard' | 'rollcall' | 'settings';
 
-export function Placeholder({ name }: { name: string }) {
-  return (
-    <div className="card muted">
-      <p>{name} — coming soon</p>
-    </div>
-  );
-}
-
 export const TABS: { id: TabId; label: string; inBar: boolean; render: () => ReactNode }[] = [
   { id: 'debate', label: 'Debate', inBar: true, render: () => <DebatePanel /> },
   { id: 'motions', label: 'Motions', inBar: true, render: () => <MotionsPanel /> },

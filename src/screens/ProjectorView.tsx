@@ -125,7 +125,7 @@ function Content({ state, now }: { state: CommitteeState; now: number }) {
           <ol>
             {shownMotions.map((m) => (
               <li key={m.id}>
-                {describeMotion(m)} — {byId.get(m.proposerId)?.name ?? ''}
+                {describeMotion(m)}, proposed by {byId.get(m.proposerId)?.name ?? ''}
               </li>
             ))}
           </ol>
@@ -136,7 +136,7 @@ function Content({ state, now }: { state: CommitteeState; now: number }) {
         <div role="status" className={`proj-vote ${lastVote.passed ? 'is-passed' : 'is-failed'}`}>
           <div className="proj-vote-subject">{lastVote.subject}</div>
           <div className="proj-vote-result">{lastVote.passed ? 'PASSED' : 'FAILED'}</div>
-          <div className="proj-vote-counts">{`For ${lastVote.for} · Against ${lastVote.against} · Abstain ${lastVote.abstain}`}</div>
+          <div className="proj-vote-counts">{`For ${lastVote.for}, against ${lastVote.against}, abstain ${lastVote.abstain}`}</div>
         </div>
       )}
     </>

@@ -107,10 +107,10 @@ describe('LeaderboardPanel', () => {
   it('opens the log modal and edits quality', async () => {
     const user = setup();
     await user.click(screen.getByRole('button', { name: 'Show log for Ethiopia' }));
-    const dialog = screen.getByRole('dialog', { name: 'Ethiopia — 22 points' });
+    const dialog = screen.getByRole('dialog', { name: 'Ethiopia, 22 points' });
     await user.selectOptions(within(dialog).getByLabelText('Quality for GSL speech'), '1');
     expect(screen.getByTestId('probe').textContent).toContain(':gsl_speech:1:');
-    expect(screen.getByRole('dialog', { name: 'Ethiopia — 10 points' })).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'Ethiopia, 10 points' })).toBeInTheDocument();
   });
 
   it('saves a note on blur', async () => {
@@ -132,6 +132,6 @@ describe('LeaderboardPanel', () => {
     expect(within(dialog).queryByLabelText('Quality for Sponsor')).toBeNull();
     await user.click(within(dialog).getByRole('button', { name: 'Delete Penalty' }));
     expect(screen.getByTestId('probe').textContent).not.toContain('penalty');
-    expect(screen.getByRole('dialog', { name: 'Kenya — 11 points' })).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'Kenya, 11 points' })).toBeInTheDocument();
   });
 });

@@ -71,6 +71,7 @@ export function DelegateSelect({
         placeholder={placeholder}
         value={text}
         onFocus={() => setOpen(true)}
+        onClick={() => setOpen(true)}
         onBlur={close}
         onChange={(e) => {
           setQuery(e.target.value)

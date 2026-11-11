@@ -324,7 +324,7 @@ export function VoteModal({
             </span>
           )}
           <span className="tabular muted">
-            For {result.for} · Against {result.against} · Abstain {result.abstain}
+            For {result.for}, against {result.against}, abstain {result.abstain}
           </span>
         </div>
       </div>

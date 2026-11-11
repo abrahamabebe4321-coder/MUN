@@ -26,6 +26,17 @@ function Harness({ onChange, exclude, initial = null }: { onChange?: (id: string
 const names = () => screen.queryAllByRole('option').map((o) => o.textContent)
 
 describe('DelegateSelect', () => {
+  it('reopens the list on click after an option was picked', async () => {
+    render(<Harness />)
+    const input = screen.getByRole('combobox', { name: 'Delegate' })
+    await userEvent.click(input)
+    await userEvent.click(screen.getByText('France'))
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
+    await userEvent.click(input)
+    expect(screen.getByRole('listbox')).toBeInTheDocument()
+  })
+
+
   it('lists options on focus and filters case/diacritic-insensitively, prefix first', async () => {
     render(<Harness />)
     await userEvent.click(screen.getByRole('combobox', { name: 'Delegate' }))

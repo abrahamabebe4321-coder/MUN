@@ -213,8 +213,8 @@ describe('vote record', () => {
     await user.click(screen.getByText('Vote record (2)', { selector: 'summary' }));
     const subs = screen.getAllByText(/^(Old|New) one$/).map((e) => e.textContent);
     expect(subs).toEqual(['New one', 'Old one']);
-    expect(screen.getByText('For 1 · Against 2 · Abstain 1')).toBeInTheDocument();
-    expect(screen.getByText('Substantive · Two-thirds · Session 1')).toBeInTheDocument();
+    expect(screen.getByText('For 1, against 2, abstain 1')).toBeInTheDocument();
+    expect(screen.getByText('Substantive, two-thirds, session 1')).toBeInTheDocument();
     expect(screen.getByText('Roll call', { selector: 'summary' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Delete vote: New one' }));
     expect(latest.state.votes.map((v) => v.subject)).toEqual(['Old one']);

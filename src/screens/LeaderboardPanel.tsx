@@ -37,7 +37,7 @@ export function LeaderboardPanel() {
     <section className="lb" aria-label="Leaderboard">
       <div className="lb-head">
         <h2>Scores</h2>
-        <p className="muted">Private to the chair — never shown on the projector.</p>
+        <p className="muted">Private to the chair. Never shown on the projector.</p>
       </div>
 
       {rows.length === 0 ? (
@@ -178,11 +178,11 @@ export function DelegateLogModal({
   const summary = row
     ? CATEGORIES.filter((c) => row.byCategory[c] !== 0)
         .map((c) => `${CATEGORY_LABELS[c]} ${row.byCategory[c]}`)
-        .join(' · ')
+        .join(', ')
     : '';
 
   return (
-    <Modal wide title={`${name} — ${total} points`} onClose={onClose}>
+    <Modal wide title={`${name}, ${total} ${Math.abs(total) === 1 ? 'point' : 'points'}`} onClose={onClose}>
       {summary ? <p className="muted lb-summary">{summary}</p> : null}
       {items.length === 0 ? (
         <p className="muted">No interactions recorded for this delegate.</p>

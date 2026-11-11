@@ -115,14 +115,14 @@ describe('describeMotion', () => {
   it('mod', () => {
     expect(
       describeMotion(mk({ type: 'mod', topic: 'Wheat exports', totalSeconds: 600, speakerSeconds: 60 })),
-    ).toBe('Moderated caucus on "Wheat exports" — 10:00 total, 1:00 per speaker');
+    ).toBe('Moderated caucus on "Wheat exports" (10:00 total, 1:00 per speaker)');
   });
   it('unmod', () => {
-    expect(describeMotion(mk({ type: 'unmod', totalSeconds: 900 }))).toBe('Unmoderated caucus — 15:00');
+    expect(describeMotion(mk({ type: 'unmod', totalSeconds: 900 }))).toBe('Unmoderated caucus (15:00)');
   });
   it('gsl', () => {
     expect(describeMotion(mk({ type: 'gsl', speakerSeconds: 90 }))).toBe(
-      'General speakers list — 1:30 per speaker',
+      'General speakers list (1:30 per speaker)',
     );
   });
   it('set_agenda', () => {
@@ -131,7 +131,7 @@ describe('describeMotion', () => {
     );
   });
   it('extend', () => {
-    expect(describeMotion(mk({ type: 'extend', totalSeconds: 300 }))).toBe('Extend current caucus — 5:00');
+    expect(describeMotion(mk({ type: 'extend', totalSeconds: 300 }))).toBe('Extend current caucus (5:00)');
   });
   it('other with and without topic', () => {
     expect(describeMotion(mk({ type: 'other', topic: 'Point of the day' }))).toBe('Point of the day');
@@ -144,6 +144,6 @@ describe('describeMotion', () => {
     expect(describeMotion(mk({ type: 'present_resolutions' }))).toBe('Present resolutions');
   });
   it('formats seconds as m:ss', () => {
-    expect(describeMotion(mk({ type: 'unmod', totalSeconds: 65 }))).toBe('Unmoderated caucus — 1:05');
+    expect(describeMotion(mk({ type: 'unmod', totalSeconds: 65 }))).toBe('Unmoderated caucus (1:05)');
   });
 });

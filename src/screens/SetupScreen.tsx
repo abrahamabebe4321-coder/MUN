@@ -215,7 +215,7 @@ export function SetupScreen() {
         >
           Start committee
         </Button>
-        {!canStart && <span className="muted">{missing.join(' · ')}</span>}
+        {!canStart && <span className="muted">{missing.join(', ')}</span>}
       </footer>
     </main>
   )
