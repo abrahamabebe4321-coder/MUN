@@ -16,6 +16,7 @@ const MODE_LABELS = {
 } as const;
 
 const MAX_QUEUE = 6;
+const MAX_MOTIONS = 4;
 const VOTE_BANNER_MS = 30_000;
 
 function toggleFullscreen() {
@@ -44,7 +45,7 @@ function Content({ state, now }: { state: CommitteeState; now: number }) {
   const header = (
     <header className="proj-header">
       <h2 className="proj-name">{state.name}</h2>
-      {state.topic && <div className="proj-topic">{state.topic}</div>}
+      {state.topic && <div className="proj-topic" title={state.topic}>{state.topic}</div>}
       <div className="proj-session">{`Session ${state.session}`}</div>
     </header>
   );
@@ -68,6 +69,8 @@ function Content({ state, now }: { state: CommitteeState; now: number }) {
   const shown = queue.slice(0, MAX_QUEUE);
   const more = queue.length - shown.length;
   const motions = orderMotions(state.motions);
+  const shownMotions = motions.slice(0, MAX_MOTIONS);
+  const moreMotions = motions.length - shownMotions.length;
   const lastVote = state.votes[state.votes.length - 1];
   const showVote = lastVote !== undefined && now - lastVote.timestamp < VOTE_BANNER_MS;
 
@@ -85,7 +88,7 @@ function Content({ state, now }: { state: CommitteeState; now: number }) {
           <div className="proj-main">
             {speaker ? (
               <div className="proj-speaker">
-                <Flag code={speaker.flag} size={96} />
+                <Flag code={speaker.flag} size={72} />
                 <span className="proj-speaker-name">{speaker.name}</span>
               </div>
             ) : (
@@ -120,12 +123,13 @@ function Content({ state, now }: { state: CommitteeState; now: number }) {
         <section className="proj-motions">
           <h2>Motions on the floor</h2>
           <ol>
-            {motions.map((m) => (
+            {shownMotions.map((m) => (
               <li key={m.id}>
                 {describeMotion(m)} — {byId.get(m.proposerId)?.name ?? ''}
               </li>
             ))}
           </ol>
+          {moreMotions > 0 && <div className="proj-more">{`+${moreMotions} more`}</div>}
         </section>
       )}
       {showVote && (

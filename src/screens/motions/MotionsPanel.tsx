@@ -141,11 +141,13 @@ function RaiseForm() {
       </div>
       <div className="motions-field" role="group" aria-label="Motion quality">
         <span className="motions-label">Motion quality</span>
-        <TierButtons
-          selected={tier}
-          onPick={setTier}
-          points={(t) => scoreInteraction({ kind: 'motion_raised', tier: t, passed: false }, state.scoring)}
-        />
+        <div className="motions-quality">
+          <TierButtons
+            selected={tier}
+            onPick={setTier}
+            points={(t) => scoreInteraction({ kind: 'motion_raised', tier: t, passed: false }, state.scoring)}
+          />
+        </div>
       </div>
       <div>
         <Button type="submit" variant="primary" disabled={!canSubmit}>Add to the floor</Button>

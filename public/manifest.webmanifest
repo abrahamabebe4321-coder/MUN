@@ -1,0 +1,13 @@
+{
+  "name": "MUN Chair",
+  "short_name": "MUN Chair",
+  "description": "Run and score a Model UN committee",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "background_color": "#10161c",
+  "theme_color": "#0077a8",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

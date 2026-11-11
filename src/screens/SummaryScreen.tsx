@@ -18,6 +18,10 @@ function signed(n: number): string {
   return n > 0 ? `+${n}` : String(n);
 }
 
+function pointsText(n: number): string {
+  return `${n} ${Math.abs(n) === 1 ? 'point' : 'points'}`;
+}
+
 function slugify(name: string): string {
   return (
     name
@@ -138,7 +142,7 @@ export function SummaryScreen() {
                     return (
                       <li key={id}>
                         <DelegateChip delegate={d} size={32} />
-                        <span className="summary-award-pts">{figure(a, d)} points</span>
+                        <span className="summary-award-pts">{pointsText(figure(a, d))}</span>
                       </li>
                     );
                   })}
@@ -201,7 +205,7 @@ export function SummaryScreen() {
             >
               <header>
                 <DelegateChip delegate={d} size={28} />
-                <span className="muted">{`Rank ${d.rank} · ${d.total} points`}</span>
+                <span className="muted">{`Rank ${d.rank} · ${pointsText(d.total)}`}</span>
               </header>
               <QualityMix d={d} />
               {d.kinds.length === 0 ? (

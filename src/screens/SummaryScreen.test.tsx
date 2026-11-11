@@ -13,7 +13,7 @@ function build(actions: Action[]): CommitteeState {
   const s = actions.reduce(reducer, createCommittee());
   return { ...s, stage: 'ended', name: 'GA1 Plenary', topic: 'Veto reform' };
 }
-const add = (delegateId: string, kind: 'gsl_speech' | 'poi_asked' | 'penalty', tier: 1 | 2 | 3, note = ''): Action => ({
+const add = (delegateId: string, kind: 'gsl_speech' | 'poi_asked' | 'penalty' | 'follow_up', tier: 1 | 2 | 3, note = ''): Action => ({
   type: 'interaction/add',
   delegateId,
   kind,
@@ -84,6 +84,18 @@ describe('SummaryScreen', () => {
     expect(outstanding.getByText('Bravo')).toBeInTheDocument();
     expect(within(screen.getByRole('group', { name: 'Best Speaker' })).getByText('Alpha')).toBeInTheDocument();
     expect(screen.getByText(/final decision is the chair's/)).toBeInTheDocument();
+  });
+
+  it('uses the singular "point" for a total of exactly 1', () => {
+    setup(
+      build([
+        { type: 'delegate/add', id: 'a', name: 'Alpha', flag: 'et' },
+        add('a', 'follow_up', 1),
+      ]),
+    );
+    expect(screen.queryByText(/\b1 points\b/)).not.toBeInTheDocument();
+    expect(screen.getAllByText('1 point').length).toBeGreaterThan(0);
+    expect(screen.getByText('Rank 1 · 1 point')).toBeInTheDocument();
   });
 
   it('lists the final ranking in order', () => {
