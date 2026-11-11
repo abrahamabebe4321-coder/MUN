@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { KeyboardEvent } from 'react'
 import { Button } from '../components/ui/Button'
+import { DelegateChip } from '../components/ui/DelegateChip'
 import { Flag } from '../components/Flag'
 import { COUNTRIES, searchCountries } from '../data/countries'
 import { useCommittee } from '../state/CommitteeContext'
@@ -74,43 +75,52 @@ export function SetupScreen() {
   if (state.delegates.length < 2) missing.push('Add at least 2 delegations')
   const canStart = missing.length === 0
 
+  const shownResults = query.trim() ? results.slice(0, 8) : []
+
   return (
     <main className="setup">
       <h1>Set up your committee</h1>
+      <p className="muted setup-lede">Name the committee, add the delegations, then start.</p>
       <div className="setup-fields">
-        <label className="setup-field">
-          Committee name
+        <div className="field">
+          <label htmlFor="setup-name">Committee name</label>
           <input
+            id="setup-name"
             type="text"
             value={state.name}
             placeholder="e.g. General Assembly"
             onChange={(e) => dispatch({ type: 'committee/update', name: e.target.value })}
           />
-        </label>
-        <label className="setup-field">
-          Topic
+        </div>
+        <div className="field">
+          <label htmlFor="setup-topic">Topic</label>
           <input
+            id="setup-topic"
             type="text"
             value={state.topic}
             placeholder="e.g. Reform of the veto"
             onChange={(e) => dispatch({ type: 'committee/update', topic: e.target.value })}
           />
-        </label>
+        </div>
       </div>
 
-      <div className="setup-columns">
-        <section className="card col">
-          <h2>Add delegations</h2>
-          <input
-            type="search"
-            aria-label="Search countries"
-            placeholder="Search countries…"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={onSearchKey}
-          />
+      <section className="setup-section" aria-labelledby="setup-delegations">
+        <div className="row setup-heading">
+          <h2 id="setup-delegations">Delegations</h2>
+          <span className="muted tabular">{`${state.delegates.length} added`}</span>
+        </div>
+        <input
+          type="search"
+          className="setup-search"
+          aria-label="Search countries"
+          placeholder="Search countries…"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={onSearchKey}
+        />
+        {shownResults.length > 0 && (
           <ul className="setup-results">
-            {results.map((c) => {
+            {shownResults.map((c) => {
               const isAdded = added.has(c.code)
               return (
                 <li key={c.code}>
@@ -128,68 +138,73 @@ export function SetupScreen() {
               )
             })}
           </ul>
+        )}
 
-          <h3>Add custom delegation</h3>
-          <div className="row">
-            <input
-              type="text"
-              className="grow"
-              aria-label="Custom delegation name"
-              placeholder="e.g. African Union"
-              value={custom}
-              onChange={(e) => setCustom(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault()
-                  addCustom()
-                }
-              }}
-            />
-            <Button onClick={addCustom}>Add</Button>
+        {state.delegates.length === 0 ? (
+          <p className="muted">No delegations yet. Search for a country above.</p>
+        ) : (
+          <ul className="setup-chips">
+            {state.delegates.map((d) => (
+              <li key={d.id} className="setup-chip">
+                <DelegateChip delegate={d} />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  aria-label={`Remove ${d.name}`}
+                  onClick={() => dispatch({ type: 'delegate/remove', id: d.id })}
+                >
+                  ✕
+                </Button>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        <details className="setup-more">
+          <summary>More ways to add</summary>
+          <div className="setup-more-body">
+            <div className="field">
+              <label htmlFor="setup-custom">Add custom delegation</label>
+              <div className="row">
+                <input
+                  id="setup-custom"
+                  type="text"
+                  className="grow"
+                  aria-label="Custom delegation name"
+                  placeholder="e.g. African Union"
+                  value={custom}
+                  onChange={(e) => setCustom(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      addCustom()
+                    }
+                  }}
+                />
+                <Button onClick={addCustom}>Add</Button>
+              </div>
+            </div>
+            <div className="field">
+              <span className="setup-caption">Paste a list of countries</span>
+              <textarea
+                className="setup-textarea"
+                aria-label="Country list"
+                value={pasted}
+                onChange={(e) => setPasted(e.target.value)}
+              />
+              <div className="row">
+                <Button onClick={addFromList}>Add from list</Button>
+                {status && (
+                  <p role="status" className="muted setup-status">
+                    Added {status.added} delegation(s).
+                    {status.unknown.length > 0 && ` Not recognised: ${status.unknown.join(', ')}`}
+                  </p>
+                )}
+              </div>
+            </div>
           </div>
-
-          <details>
-            <summary>Paste a list of countries</summary>
-            <textarea
-              className="setup-textarea"
-              aria-label="Country list"
-              value={pasted}
-              onChange={(e) => setPasted(e.target.value)}
-            />
-            <Button onClick={addFromList}>Add from list</Button>
-            {status && (
-              <p role="status" className="muted">
-                Added {status.added} delegation(s).
-                {status.unknown.length > 0 && ` Not recognised: ${status.unknown.join(', ')}`}
-              </p>
-            )}
-          </details>
-        </section>
-
-        <section className="card">
-          <h2>Delegations ({state.delegates.length})</h2>
-          {state.delegates.length === 0 ? (
-            <p className="muted">No delegations yet. Add countries from the list on the left.</p>
-          ) : (
-            <ul className="setup-delegates">
-              {state.delegates.map((d) => (
-                <li key={d.id} className="setup-delegate">
-                  <Flag code={d.flag} />
-                  <span className="grow">{d.name}</span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    aria-label={`Remove ${d.name}`}
-                    onClick={() => dispatch({ type: 'delegate/remove', id: d.id })}
-                  >
-                    ✕
-                  </Button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-      </div>
+        </details>
+      </section>
 
       <footer className="setup-footer">
         <Button

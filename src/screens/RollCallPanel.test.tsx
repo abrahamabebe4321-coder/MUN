@@ -61,16 +61,24 @@ describe('RollCallPanel', () => {
     expect(within(sum).getByText('Quorum met')).toBeInTheDocument();
     expect(within(sum).getByText('Simple majority: 3')).toBeInTheDocument();
     expect(within(sum).getByText('Two-thirds majority: 3')).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Clear' }));
+    await user.click(screen.getByRole('button', { name: 'More roll call actions' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Clear' }));
     expect(probe()).toBe('et:absent,ke:absent,us:absent,gb:absent');
     expect(within(sum).getByText('No quorum')).toBeInTheDocument();
+  });
+
+  it('All present & voting from the menu', async () => {
+    const user = setup();
+    await user.click(screen.getByRole('button', { name: 'More roll call actions' }));
+    await user.click(screen.getByRole('menuitem', { name: 'All present & voting' }));
+    expect(probe()).toBe('et:present_voting,ke:present_voting,us:present_voting,gb:present_voting');
   });
 
   it('steps through with buttons', async () => {
     const user = setup();
     await user.click(screen.getByRole('button', { name: 'Call the roll one by one' }));
     expect(screen.getByText('1 of 4')).toBeInTheDocument();
-    const stepper = screen.getByText('Call the roll').closest('.card') as HTMLElement;
+    const stepper = screen.getByText('Call the roll').closest('.rollcall-stepper') as HTMLElement;
     await user.click(within(stepper).getByRole('button', { name: /^Present\b(?! &)/ }));
     expect(probe()).toContain('et:present,');
     expect(screen.getByText('2 of 4')).toBeInTheDocument();

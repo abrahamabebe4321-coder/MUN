@@ -54,6 +54,16 @@ describe('SetupScreen', () => {
     const row = screen.getAllByRole('button', { name: /Ethiopia/ }).find((b) => b.className.includes('setup-result'))!
     expect(row).toBeDisabled()
     expect(row).toHaveTextContent('Added')
+    expect(screen.getByRole('button', { name: 'Remove Ethiopia' })).toBeInTheDocument()
+  })
+
+  it('shows search results only while typing, at most 8', async () => {
+    const user = setup()
+    expect(document.querySelector('.setup-results')).toBeNull()
+    await user.type(screen.getByLabelText('Search countries'), 'a')
+    expect(document.querySelectorAll('.setup-result').length).toBe(8)
+    await user.clear(screen.getByLabelText('Search countries'))
+    expect(document.querySelector('.setup-results')).toBeNull()
   })
 
   it('Enter adds the first result', async () => {
@@ -66,6 +76,7 @@ describe('SetupScreen', () => {
 
   it('adds custom delegations and ignores duplicates', async () => {
     const user = setup()
+    await user.click(screen.getByText('More ways to add'))
     const input = screen.getByLabelText('Custom delegation name')
     await user.type(input, 'African Union')
     await user.click(screen.getByRole('button', { name: 'Add' }))
@@ -78,7 +89,7 @@ describe('SetupScreen', () => {
 
   it('pastes a list', async () => {
     const user = setup()
-    await user.click(screen.getByText('Paste a list of countries'))
+    await user.click(screen.getByText('More ways to add'))
     const ta = screen.getByLabelText('Country list')
     await user.click(ta)
     await user.paste('Kenya, USA; Narnia\nUK')

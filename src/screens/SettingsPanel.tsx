@@ -104,10 +104,11 @@ export function SettingsPanel() {
 
   return (
     <section className="settings" aria-label="Settings">
-      <div className="settings-card">
-        <h2>Committee</h2>
+      <h2>Settings</h2>
+      <div className="settings-section">
+        <h3>Committee</h3>
         <label className="settings-field">
-          Committee name
+          <span className="settings-label">Committee name</span>
           <input
             type="text"
             value={state.name}
@@ -115,7 +116,7 @@ export function SettingsPanel() {
           />
         </label>
         <label className="settings-field">
-          Topic
+          <span className="settings-label">Topic</span>
           <input
             type="text"
             value={state.topic}
@@ -132,8 +133,8 @@ export function SettingsPanel() {
         </div>
       </div>
 
-      <div className="settings-card">
-        <h2>Scoring</h2>
+      <div className="settings-section">
+        <h3>Scoring</h3>
         <p className="settings-muted">
           Points = base × quality multiplier. Changes apply immediately to everything already logged.
         </p>
@@ -173,9 +174,9 @@ export function SettingsPanel() {
         </div>
       </div>
 
-      <div className="settings-card">
-        <h2>Appearance</h2>
-        <div className="settings-radios" role="radiogroup" aria-label="Theme">
+      <div className="settings-section">
+        <h3>Appearance</h3>
+        <div className="settings-seg" role="radiogroup" aria-label="Theme">
           {(['system', 'light', 'dark'] as ThemeChoice[]).map((c) => (
             <label key={c}>
               <input
@@ -187,19 +188,19 @@ export function SettingsPanel() {
                   setTheme(c)
                   setThemeState(c)
                 }}
-              />{' '}
-              {c[0].toUpperCase() + c.slice(1)}
+              />
+              <span>{c[0].toUpperCase() + c.slice(1)}</span>
             </label>
           ))}
         </div>
       </div>
 
-      <div className="settings-card">
-        <h2>Backup</h2>
+      <div className="settings-section">
+        <h3>Backup</h3>
         <div className="settings-row">
           <Button onClick={download}>Download backup</Button>
           <label className="settings-field">
-            Restore from backup
+            <span className="settings-label">Restore from backup</span>
             <input type="file" accept=".json,application/json" onChange={onFile} />
           </label>
         </div>

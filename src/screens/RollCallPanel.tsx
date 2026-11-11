@@ -4,6 +4,8 @@ import { quorum } from '../domain/voting';
 import type { Attendance } from '../domain/types';
 import { Button } from '../components/ui/Button';
 import { DelegateChip } from '../components/ui/DelegateChip';
+import { Menu } from '../components/ui/Menu';
+import { Placard } from '../components/ui/Placard';
 import './rollcall.css';
 
 const OPTIONS: { value: Attendance; label: string; key: string }[] = [
@@ -58,13 +60,24 @@ export function RollCallPanel() {
         <Button onClick={() => dispatch({ type: 'attendance/setAll', attendance: 'present' })}>
           All present
         </Button>
-        <Button onClick={() => dispatch({ type: 'attendance/setAll', attendance: 'present_voting' })}>
-          All present & voting
-        </Button>
-        <Button onClick={() => dispatch({ type: 'attendance/setAll', attendance: 'absent' })}>Clear</Button>
+        <Menu
+          label="More roll call actions"
+          variant="ghost"
+          size="sm"
+          align="right"
+          items={[
+            {
+              label: 'All present & voting',
+              onSelect: () => dispatch({ type: 'attendance/setAll', attendance: 'present_voting' }),
+            },
+            { label: 'Clear', onSelect: () => dispatch({ type: 'attendance/setAll', attendance: 'absent' }) },
+          ]}
+        >
+          ⋯
+        </Menu>
       </div>
 
-      <div className="card rollcall-summary" aria-label="Attendance summary">
+      <div className="rollcall-summary" aria-label="Attendance summary">
         {q.total === 0 ? (
           <span className="muted">No delegations</span>
         ) : (
@@ -74,7 +87,7 @@ export function RollCallPanel() {
             <span className="tabular">{`Absent: ${q.absent}`}</span>
             <span className="tabular">{`Simple majority: ${q.simpleMajority}`}</span>
             <span className="tabular">{`Two-thirds majority: ${q.twoThirds}`}</span>
-            <span className={`badge ${q.hasQuorum ? 'rollcall-ok' : 'rollcall-warn'}`}>
+            <span className={`${q.hasQuorum ? 'rollcall-ok' : 'rollcall-warn'}`}>
               {q.hasQuorum ? 'Quorum met' : 'No quorum'}
             </span>
           </>
@@ -88,7 +101,7 @@ export function RollCallPanel() {
           </Button>
         </div>
       ) : (
-        <div className="card rollcall-stepper col">
+        <div className="rollcall-stepper col">
           <div className="row">
             <strong>Call the roll</strong>
             <span className="grow" />
@@ -102,7 +115,7 @@ export function RollCallPanel() {
           {current ? (
             <>
               <div className="rollcall-current">
-                <DelegateChip delegate={current} size={48} />
+                <Placard delegate={current} size="lg" />
               </div>
               <div className="muted tabular">{`${called.length + 1} of ${delegates.length}`}</div>
               <div className="row rollcall-actions">

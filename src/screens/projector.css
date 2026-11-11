@@ -1,16 +1,17 @@
 .projector {
-  --bg: #0a1628;
-  --surface: #12233d;
-  --surface-2: #1b3050;
-  --border: #2c4468;
-  --text: #ffffff;
-  --text-muted: #a9bad0;
-  --accent: #4fb3e6;
-  --accent-strong: #8fd0f2;
-  --danger: #ff7b7b;
-  --warning: #ffc266;
-  --success: #7fe085;
+  --bg: #0c1420;
+  --surface: #131e2e;
+  --surface-2: #1a2738;
+  --border: #2b3b52;
+  --text: #eaf0f8;
+  --text-muted: #9fb0c6;
+  --accent: #5aa7f0;
+  --accent-strong: #8cc3f7;
+  --danger: #ff7b6e;
+  --warning: #f2b458;
+  --success: #6fd49a;
   color-scheme: dark;
+  font-family: var(--font);
   position: relative;
   height: 100vh;
   overflow: hidden;
@@ -97,8 +98,11 @@
 .proj-speaker { display: flex; align-items: center; gap: 1.5vw; min-width: 0; }
 .proj-speaker .flag { font-size: clamp(2rem, 9vh, 6rem) !important; flex: none; }
 .proj-speaker-name {
-  font-size: clamp(2rem, 10vh, 6.5rem);
-  font-weight: 700;
+  font-size: clamp(2.5rem, 13vh, 8.5rem);
+  font-weight: 800;
+  font-stretch: 68%;
+  text-transform: uppercase;
+  letter-spacing: 0.01em;
   line-height: 1.05;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -156,7 +160,7 @@
 .proj-vote.is-passed { border-color: var(--success); }
 .proj-vote.is-failed { border-color: var(--danger); }
 .proj-vote-subject { font-weight: 600; }
-.proj-vote-result { font-size: clamp(2rem, 10vh, 6rem); font-weight: 800; line-height: 1; }
+.proj-vote-result { font-size: clamp(2rem, 10vh, 6rem); font-weight: 800; font-stretch: 68%; line-height: 1; }
 .proj-vote.is-passed .proj-vote-result { color: var(--success); }
 .proj-vote.is-failed .proj-vote-result { color: var(--danger); }
 .proj-vote-counts { color: var(--text-muted); }
