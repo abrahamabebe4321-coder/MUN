@@ -1,0 +1,15 @@
+.settings { display: flex; flex-direction: column; gap: 16px; max-width: 860px; }
+.settings-card { background: var(--surface, transparent); border: 1px solid var(--border, #8884); border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.settings-card h2 { margin: 0; font-size: 1.1rem; }
+.settings-muted { color: var(--text-muted, #888); font-size: 0.9rem; margin: 0; }
+.settings-field { display: flex; flex-direction: column; gap: 4px; }
+.settings-field input[type='text'] { padding: 6px 8px; }
+.settings-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.settings-mults { display: flex; flex-wrap: wrap; gap: 12px; }
+.settings-num { width: 5rem; padding: 4px 6px; }
+.settings-table-wrap { overflow-x: auto; }
+.settings-table { border-collapse: collapse; width: 100%; }
+.settings-table th, .settings-table td { text-align: left; padding: 4px 8px; border-bottom: 1px solid var(--border, #8883); white-space: nowrap; }
+.settings-group td { font-weight: 600; padding-top: 12px; }
+.settings-radios { display: flex; gap: 16px; border: 0; padding: 0; margin: 0; }
+.settings-error { color: var(--danger, #c0392b); margin: 0; }
