@@ -5,6 +5,7 @@ import { useCommittee } from '../../state/CommitteeContext'
 import { Button } from '../../components/ui/Button'
 import { DelegateSelect } from '../../components/ui/DelegateSelect'
 import { Modal } from '../../components/ui/Modal'
+import './debate.css'
 import { TierButtons } from '../../components/ui/TierButtons'
 import type { Tier } from '../../domain/types'
 
@@ -41,7 +42,7 @@ export function QuickLogModal({
 
   return (
     <Modal title={`Log: ${KIND_LABELS[kind]}`} onClose={onClose}>
-      <div className="col">
+      <div className="quicklog-form">
         <DelegateSelect
           label="Delegate"
           delegates={present}
@@ -49,14 +50,16 @@ export function QuickLogModal({
           onChange={setSelected}
           autoFocus={!delegateId}
         />
-        <label className="col">
+        <label className="field">
           <span>Note (optional)</span>
           <input type="text" value={note} onChange={(e) => setNote(e.target.value)} />
         </label>
         {flat ? (
-          <Button variant="primary" disabled={!selected} onClick={() => log(1)}>
-            Log
-          </Button>
+          <div className="quicklog-footer">
+            <Button variant="primary" disabled={!selected} onClick={() => log(1)}>
+              Log
+            </Button>
+          </div>
         ) : (
           <>
             {kind === 'penalty' && <p className="muted">Minor / Serious / Severe</p>}

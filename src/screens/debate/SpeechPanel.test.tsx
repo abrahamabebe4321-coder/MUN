@@ -37,6 +37,9 @@ function setup(mode: Exclude<DebateMode, 'none'> = 'gsl') {
   )
   return userEvent.setup()
 }
+const openAdjust = (user: ReturnType<typeof userEvent.setup>) => user.click(screen.getByText('Adjust'))
+const speechPip = (name: RegExp) =>
+  within(screen.getByRole('radiogroup', { name: 'Rate this speech' })).getByRole('radio', { name })
 const kinds = (k: string) => cur.state.interactions.filter((i) => i.kind === k)
 
 beforeEach(() => localStorage.clear())
@@ -52,15 +55,17 @@ describe('SpeechPanel timers', () => {
   })
   it('adds 15s and applies presets', async () => {
     const user = setup()
+    await openAdjust(user)
     await user.click(screen.getByRole('button', { name: 'Add 15 seconds' }))
     expect(screen.getByRole('timer')).toHaveTextContent('1:15')
     await user.click(screen.getByRole('button', { name: '1:30' }))
     expect(cur.state.debate.speakerSeconds).toBe(90)
   })
-  it('caucus controls only in mod mode', () => {
-    setup('mod')
+  it('caucus controls only in mod mode', async () => {
+    const user = setup('mod')
+    await openAdjust(user)
     expect(screen.getByRole('button', { name: 'Start caucus clock' })).toBeInTheDocument()
-    expect(screen.getByText(/speaker\(s\) left/)).toHaveTextContent('≈ 10 speaker(s) left')
+    expect(screen.getByText(/speaker\(s\) left/)).toHaveTextContent('Caucus 10:00, about 10 speaker(s) left')
   })
   it('no caucus controls in gsl', () => {
     setup('gsl')
@@ -71,21 +76,21 @@ describe('SpeechPanel timers', () => {
 describe('SpeechPanel speech rating', () => {
   it('adds, updates and clears the speech rating', async () => {
     const user = setup()
-    const floor = screen.getByText('has the floor').parentElement!
-    expect(within(floor).getByText('Ethiopia')).toBeInTheDocument()
-    await user.click(screen.getAllByRole('button', { name: /^Decent/ })[0])
+    expect(screen.getByText('Ethiopia')).toBeInTheDocument()
+    await user.click(speechPip(/^Decent/))
     expect(kinds('gsl_speech')).toHaveLength(1)
     expect(kinds('gsl_speech')[0]).toMatchObject({ delegateId: 'et', tier: 2, refId: cur.state.debate.speechRef })
-    await user.click(screen.getAllByRole('button', { name: /^Insightful/ })[0])
+    await user.click(speechPip(/^Insightful/))
     expect(kinds('gsl_speech')).toHaveLength(1)
     expect(kinds('gsl_speech')[0].tier).toBe(3)
-    await user.click(screen.getByRole('button', { name: 'Clear rating' }))
+    // clicking the chosen pip again clears the rating
+    await user.click(speechPip(/^Insightful/))
     expect(kinds('gsl_speech')).toHaveLength(0)
   })
   it('opening mode: opening_speech and no POI card', async () => {
     const user = setup('opening')
     expect(screen.queryByText('Points of information')).toBeNull()
-    await user.click(screen.getAllByRole('button', { name: /^Works/ })[0])
+    await user.click(speechPip(/^Works/))
     expect(kinds('opening_speech')).toHaveLength(1)
   })
 })
@@ -94,8 +99,7 @@ describe('SpeechPanel POIs', () => {
   async function addPoi(user: ReturnType<typeof userEvent.setup>) {
     await user.click(screen.getByRole('combobox', { name: 'POI from' }))
     await user.click(screen.getByRole('option', { name: /Kenya/ }))
-    // POI add row tier buttons are the 2nd group (index 1) of full buttons
-    await user.click(screen.getAllByRole('button', { name: /^Insightful/ })[1])
+    await user.click(within(screen.getByRole('radiogroup', { name: 'Rate the question' })).getByRole('radio', { name: /^Insightful/ }))
   }
   it('excludes the speaker from asker options', async () => {
     const user = setup()
@@ -110,11 +114,11 @@ describe('SpeechPanel POIs', () => {
     const poi = kinds('poi_asked')[0]
     expect(poi).toMatchObject({ delegateId: 'ke', tier: 3, refId: cur.state.debate.speechRef })
     const row = screen.getByRole('listitem', { name: 'POI from Kenya' })
-    await user.click(within(within(row).getByRole('group', { name: 'Answer quality' })).getByRole('button', { name: 'Decent' }))
+    await user.click(within(within(row).getByRole('radiogroup', { name: 'Answer quality' })).getByRole('radio', { name: 'Decent' }))
     expect(kinds('poi_answer')[0]).toMatchObject({ delegateId: 'et', tier: 2, refId: poi.id })
-    await user.click(within(within(row).getByRole('group', { name: 'Follow-up quality' })).getByRole('button', { name: 'Works' }))
+    await user.click(within(within(row).getByRole('radiogroup', { name: 'Follow-up quality' })).getByRole('radio', { name: 'Works' }))
     expect(kinds('follow_up')[0]).toMatchObject({ delegateId: 'ke', tier: 1, refId: poi.id })
-    await user.click(within(within(row).getByRole('group', { name: 'Question quality' })).getByRole('button', { name: 'Works' }))
+    await user.click(within(within(row).getByRole('radiogroup', { name: 'Question quality' })).getByRole('radio', { name: 'Works' }))
     expect(kinds('poi_asked')[0].tier).toBe(1)
 
     await user.click(screen.getByRole('button', { name: 'Remove POI from Kenya' }))
@@ -128,15 +132,14 @@ describe('SpeechPanel POIs', () => {
 describe('SpeechPanel advancing', () => {
   it('Next speaker gives floor to Kenya and resets the speech', async () => {
     const user = setup()
-    await user.click(screen.getAllByRole('button', { name: /^Decent/ })[0])
+    await user.click(speechPip(/^Decent/))
     await user.click(screen.getByRole('button', { name: 'Start' }))
     await user.click(screen.getByRole('button', { name: /Next speaker/ }))
     expect(cur.state.debate.currentSpeakerId).toBe('ke')
     expect(isRunning(cur.state.debate.speechTimer)).toBe(false)
-    expect(screen.queryByRole('button', { name: 'Clear rating' })).toBeNull()
-    screen.getAllByRole('button', { pressed: false }).filter((b) => /^(Works|Decent|Insightful)/.test(b.getAttribute('aria-label') ?? '')).forEach((b) =>
-      expect(b).toHaveAttribute('aria-pressed', 'false'),
-    )
+    within(screen.getByRole('radiogroup', { name: 'Rate this speech' }))
+      .getAllByRole('radio')
+      .forEach((b) => expect(b).toHaveAttribute('aria-checked', 'false'))
     expect(screen.getByRole('button', { name: /Finish speech/ })).toBeInTheDocument()
   })
   it('n key advances; space toggles but not while typing in a combobox', async () => {

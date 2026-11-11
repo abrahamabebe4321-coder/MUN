@@ -52,7 +52,7 @@ beforeEach(() => localStorage.clear())
 describe('SpeakersPanel', () => {
   it('shows the empty state', () => {
     setup()
-    expect(screen.getByText('The speakers list is empty.')).toBeInTheDocument()
+    expect(screen.getByText('Add a speaker to start the list.')).toBeInTheDocument()
   })
 
   it('adds via the combobox and clears the box', async () => {
@@ -75,6 +75,7 @@ describe('SpeakersPanel', () => {
 
   it('reorders and disables the end buttons', async () => {
     const user = setup()
+    await user.click(screen.getByText('Yet to speak (3)'))
     for (const id of ['et', 'ke', 'us']) await user.click(screen.getByRole('button', { name: new RegExp(`^Add ${{ et: 'Ethiopia', ke: 'Kenya', us: 'United States' }[id]} to`) }))
     expect(current.debate.speakersList).toEqual(['et', 'ke', 'us'])
     expect(screen.getByRole('button', { name: 'Move Ethiopia up' })).toBeDisabled()
@@ -87,14 +88,16 @@ describe('SpeakersPanel', () => {
 
   it('removes a speaker', async () => {
     const user = setup()
+    await user.click(screen.getByText('Yet to speak (3)'))
     await user.click(screen.getByRole('button', { name: 'Add Kenya to speakers list' }))
     await user.click(screen.getByRole('button', { name: 'Remove Kenya from speakers list' }))
     expect(current.debate.speakersList).toEqual([])
-    expect(screen.getByText('The speakers list is empty.')).toBeInTheDocument()
+    expect(screen.getByText('Add a speaker to start the list.')).toBeInTheDocument()
   })
 
   it('gives the floor: sets current speaker and removes from the queue', async () => {
     const user = setup()
+    await user.click(screen.getByText('Yet to speak (3)'))
     await user.click(screen.getByRole('button', { name: 'Add Kenya to speakers list' }))
     await user.click(screen.getByRole('button', { name: 'Add Ethiopia to speakers list' }))
     await user.click(screen.getByRole('button', { name: 'Give floor to Ethiopia' }))
@@ -104,7 +107,8 @@ describe('SpeakersPanel', () => {
 
   it('yet-to-speak chips add to the queue and leave that section', async () => {
     const user = setup()
-    expect(screen.getByText('Yet to speak')).toBeInTheDocument()
+    expect(screen.getByText('Yet to speak (3)')).toBeInTheDocument()
+    await user.click(screen.getByText('Yet to speak (3)'))
     await user.click(screen.getByRole('button', { name: 'Add Kenya to speakers list' }))
     expect(current.debate.speakersList).toEqual(['ke'])
     expect(screen.queryByRole('button', { name: 'Add Kenya to speakers list' })).not.toBeInTheDocument()
@@ -114,6 +118,7 @@ describe('SpeakersPanel', () => {
 
   it('shows Already spoken after speakers finish', async () => {
     const user = setup()
+    await user.click(screen.getByText('Yet to speak (3)'))
     expect(screen.queryByText(/Already spoken/)).not.toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Add Kenya to speakers list' }))
     await user.click(screen.getByRole('button', { name: 'Add Ethiopia to speakers list' }))

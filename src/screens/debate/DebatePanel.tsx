@@ -5,13 +5,16 @@ import type { DebateMode } from '../../state/state'
 import { isExpired, isRunning } from '../../domain/timer'
 import { useNow } from '../../hooks/useNow'
 import { Button } from '../../components/ui/Button'
+import { Menu } from '../../components/ui/Menu'
 import { Modal } from '../../components/ui/Modal'
 import { TimeInput } from '../../components/ui/TimeInput'
 import { TimerDisplay } from '../../components/ui/TimerDisplay'
-import { DelegateChip } from '../../components/ui/DelegateChip'
+import { DelegateSelect } from '../../components/ui/DelegateSelect'
 import { SpeechPanel } from './SpeechPanel'
 import { SpeakersPanel } from './SpeakersPanel'
-import { QuickLogBar, QuickLogModal } from './QuickLog'
+import { QuickLogModal } from './QuickLog'
+import { KIND_LABELS } from '../../domain/scoring'
+import type { InteractionKind } from '../../domain/types'
 import './debate.css'
 
 type StartMode = 'opening' | 'gsl' | 'mod' | 'unmod'
@@ -46,11 +49,13 @@ const UNMOD_KINDS = [
   'penalty',
 ] as const
 
+const DEFAULT_KINDS = UNMOD_KINDS.slice(1) as readonly InteractionKind[]
+
 export function DebatePanel() {
   const { state, dispatch } = useCommittee()
   const { debate } = state
   const [starting, setStarting] = useState<StartMode | null>(null)
-  const [logFor, setLogFor] = useState<string | null>(null)
+  const [log, setLog] = useState<{ kind: InteractionKind; delegateId?: string } | null>(null)
   const caucus = debate.caucusTimer
   const now = useNow(caucus !== null && isRunning(caucus))
   const caucusMode = debate.mode === 'mod' || debate.mode === 'unmod'
@@ -76,76 +81,74 @@ export function DebatePanel() {
 
   const present = state.delegates.filter((d) => d.attendance !== 'absent')
 
+  const logKinds: InteractionKind[] = debate.mode === 'unmod' ? [...UNMOD_KINDS] : [...DEFAULT_KINDS]
+
   return (
     <section className="debate" aria-label="Debate">
-      <div className="card debate-status">
-        <div className="debate-status-head">
+      <header className="debate-head">
+        <div className="debate-head-row">
           <h2>{heading}</h2>
-          {debate.mode !== 'none' && (
-            <Button variant="danger" aria-label="End current debate" onClick={endDebate}>
-              End
-            </Button>
-          )}
+          <div className="debate-head-actions">
+            <Menu
+              label={debate.mode === 'none' ? 'Start debate' : 'Change debate'}
+              variant={debate.mode === 'none' ? 'primary' : 'secondary'}
+              align="right"
+              items={START_BUTTONS.map((b) => ({ label: b.label, onSelect: () => setStarting(b.mode) }))}
+            />
+            <Menu
+              label="Log a point"
+              variant="secondary"
+              align="right"
+              items={logKinds.map((k) => ({ label: KIND_LABELS[k], onSelect: () => setLog({ kind: k }) }))}
+            />
+            {debate.mode !== 'none' && (
+              <Button variant="danger" aria-label="End current debate" onClick={endDebate}>
+                End
+              </Button>
+            )}
+          </div>
         </div>
         {elapsed && (
-          <div className="debate-banner" role="status">
+          <p className="debate-banner" role="status">
             Caucus time has elapsed.
-          </div>
+          </p>
         )}
-        <div className="debate-start">
-          <span className="debate-start-label">Start:</span>
-          {START_BUTTONS.map((b) => (
-            <Button
-              key={b.mode}
-              variant={debate.mode === b.mode ? 'primary' : 'secondary'}
-              onClick={() => setStarting(b.mode)}
-            >
-              {b.label}
-            </Button>
-          ))}
-        </div>
-        <QuickLogBar kinds={debate.mode === 'unmod' ? [...UNMOD_KINDS] : undefined} />
-      </div>
+      </header>
 
       {debate.mode === 'unmod' && caucus ? (
         <div className="debate-unmod">
-          <div className="card">
-            <TimerDisplay timer={caucus} now={now} label="Unmoderated caucus" size="md" />
+          <div className="debate-unmod-timer">
+            <TimerDisplay timer={caucus} now={now} label="Unmoderated caucus" size="xl" />
             <div className="debate-unmod-controls">
-              <Button variant="primary" onClick={() => caucusOp('toggle')}>
+              <Button variant="primary" size="lg" onClick={() => caucusOp('toggle')}>
                 {isRunning(caucus) ? 'Pause' : 'Start'}
               </Button>
-              <Button onClick={() => caucusOp('reset')}>Reset</Button>
-              <Button aria-label="Add 1 minute" onClick={() => caucusOp('add', 60)}>
-                +1:00
-              </Button>
-              <Button aria-label="Remove 1 minute" onClick={() => caucusOp('add', -60)}>
-                −1:00
-              </Button>
+              <details className="speech-adjust">
+                <summary>Adjust</summary>
+                <div className="speech-adjust-body">
+                  <Button onClick={() => caucusOp('reset')}>Reset</Button>
+                  <Button aria-label="Add 1 minute" onClick={() => caucusOp('add', 60)}>
+                    +1:00
+                  </Button>
+                  <Button aria-label="Remove 1 minute" onClick={() => caucusOp('add', -60)}>
+                    −1:00
+                  </Button>
+                </div>
+              </details>
             </div>
           </div>
-          <div className="card">
-            <h3>Log leadership</h3>
-            <p className="muted">
-              Click a delegate to credit bloc-building or drafting leadership you observe.
-            </p>
-            <div className="debate-leaders">
-              {present.map((d) => (
-                <button
-                  key={d.id}
-                  type="button"
-                  className="debate-leader"
-                  aria-label={`Log leadership for ${d.name}`}
-                  onClick={() => setLogFor(d.id)}
-                >
-                  <DelegateChip delegate={d} />
-                </button>
-              ))}
+          <div className="debate-leadership">
+            <span className="muted">Credit leadership you observe</span>
+            <div className="debate-leadership-select">
+              <DelegateSelect
+                label="Log leadership for"
+                placeholder="Choose a delegate…"
+                delegates={present}
+                value={null}
+                onChange={(id) => id && setLog({ kind: 'unmod_leadership', delegateId: id })}
+              />
             </div>
           </div>
-          {logFor && (
-            <QuickLogModal kind="unmod_leadership" delegateId={logFor} onClose={() => setLogFor(null)} />
-          )}
         </div>
       ) : (
         <div className="debate-grid">
@@ -154,6 +157,9 @@ export function DebatePanel() {
         </div>
       )}
 
+      {log && (
+        <QuickLogModal kind={log.kind} delegateId={log.delegateId} onClose={() => setLog(null)} />
+      )}
       {starting && <StartDebateModal mode={starting} onClose={() => setStarting(null)} />}
     </section>
   )
@@ -221,7 +227,7 @@ export function StartDebateModal({
           </p>
         )}
         {mode === 'mod' && (
-          <label className="col">
+          <label className="field">
             <span>Topic</span>
             <input type="text" value={topic} autoFocus onChange={(e) => setTopic(e.target.value)} />
           </label>

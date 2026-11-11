@@ -35,6 +35,12 @@ function setup(ui: React.ReactNode = <DebatePanel />) {
 
 const dialog = () => within(screen.getByRole('dialog'))
 
+async function chooseMode(user: ReturnType<typeof userEvent.setup>, name: string) {
+  const trigger = screen.queryByRole('button', { name: 'Change debate' }) ?? screen.getByRole('button', { name: 'Start debate' })
+  await user.click(trigger)
+  await user.click(screen.getByRole('menuitem', { name }))
+}
+
 beforeEach(() => localStorage.clear())
 
 describe('DebatePanel', () => {
@@ -42,11 +48,12 @@ describe('DebatePanel', () => {
     setup()
     expect(screen.getByText('No debate in progress')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'End current debate' })).toBeNull()
+    expect(screen.getByRole('button', { name: 'Start debate' })).toBeInTheDocument()
   })
 
   it('requires a topic for a moderated caucus and applies defaults', async () => {
     const user = setup()
-    await user.click(screen.getByRole('button', { name: 'Moderated caucus' }))
+    await chooseMode(user, 'Moderated caucus')
     expect(dialog().getByRole('button', { name: 'Start' })).toBeDisabled()
     await user.type(dialog().getByLabelText('Topic'), '  Water access ')
     await user.click(dialog().getByRole('button', { name: 'Start' }))
@@ -60,7 +67,7 @@ describe('DebatePanel', () => {
 
   it('uses presets and shows speaker count', async () => {
     const user = setup()
-    await user.click(screen.getByRole('button', { name: 'Moderated caucus' }))
+    await chooseMode(user, 'Moderated caucus')
     await user.type(dialog().getByLabelText('Topic'), 'X')
     await user.click(dialog().getByRole('button', { name: '5:00' }))
     await user.click(dialog().getByRole('button', { name: '0:30' }))
@@ -72,11 +79,11 @@ describe('DebatePanel', () => {
 
   it('opening speeches queue present delegates, or none when unticked', async () => {
     const user = setup()
-    await user.click(screen.getByRole('button', { name: 'Opening speeches' }))
+    await chooseMode(user, 'Opening speeches')
     await user.click(dialog().getByRole('button', { name: 'Start' }))
     expect(cur.state.debate.mode).toBe('opening')
     expect(cur.state.debate.speakersList).toEqual(['et', 'ke', 'us'])
-    await user.click(screen.getByRole('button', { name: 'Opening speeches' }))
+    await chooseMode(user, 'Opening speeches')
     await user.click(dialog().getByLabelText('Queue every present delegate in alphabetical order'))
     await user.click(dialog().getByRole('button', { name: 'Start' }))
     expect(cur.state.debate.speakersList).toEqual([])
@@ -84,7 +91,7 @@ describe('DebatePanel', () => {
 
   it('starts a GSL with chosen speaker time', async () => {
     const user = setup()
-    await user.click(screen.getByRole('button', { name: 'General speakers list' }))
+    await chooseMode(user, 'General speakers list')
     await user.click(dialog().getByRole('button', { name: '1:30' }))
     await user.click(dialog().getByRole('button', { name: 'Start' }))
     expect(cur.state.debate.mode).toBe('gsl')
@@ -93,7 +100,7 @@ describe('DebatePanel', () => {
 
   it('runs an unmoderated caucus', async () => {
     const user = setup()
-    await user.click(screen.getByRole('button', { name: 'Unmoderated caucus' }))
+    await chooseMode(user, 'Unmoderated caucus')
     await user.click(dialog().getByRole('button', { name: 'Start' }))
     expect(cur.state.debate.mode).toBe('unmod')
     expect(screen.getByRole('timer')).toHaveTextContent('15:00')
@@ -103,8 +110,9 @@ describe('DebatePanel', () => {
     expect(isRunning(cur.state.debate.caucusTimer!)).toBe(false)
     await user.click(screen.getByRole('button', { name: 'Add 1 minute' }))
     expect(screen.getByRole('timer')).toHaveTextContent('16:00')
-    expect(screen.queryByRole('button', { name: 'Log leadership for United Kingdom' })).toBeNull()
-    await user.click(screen.getByRole('button', { name: 'Log leadership for Kenya' }))
+    await user.click(screen.getByRole('combobox', { name: 'Log leadership for' }))
+    expect(screen.queryByRole('option', { name: /United Kingdom/ })).toBeNull()
+    await user.click(screen.getByRole('option', { name: /Kenya/ }))
     const modal = screen.getByRole('dialog')
     await user.click((modal.querySelector('.tier-btn') ?? within(modal).getByRole('button', { name: 'Log' })) as HTMLElement)
     const logged = cur.state.interactions.filter((i) => i.kind === 'unmod_leadership')
@@ -112,9 +120,17 @@ describe('DebatePanel', () => {
     expect(logged[0].delegateId).toBe('ke')
   })
 
+  it('Log a point menu opens the quick log for the chosen kind', async () => {
+    const user = setup()
+    await user.click(screen.getByRole('button', { name: 'Log a point' }))
+    expect(screen.queryByRole('menuitem', { name: 'Unmod leadership' })).toBeNull()
+    await user.click(screen.getByRole('menuitem', { name: 'Point of order' }))
+    expect(screen.getByRole('dialog', { name: 'Log: Point of order' })).toBeInTheDocument()
+  })
+
   it('End returns to none', async () => {
     const user = setup()
-    await user.click(screen.getByRole('button', { name: 'General speakers list' }))
+    await chooseMode(user, 'General speakers list')
     await user.click(dialog().getByRole('button', { name: 'Start' }))
     await user.click(screen.getByRole('button', { name: 'End current debate' }))
     expect(cur.state.debate.mode).toBe('none')
@@ -122,9 +138,9 @@ describe('DebatePanel', () => {
 
   it('warns when a debate is active and start is one undo step', async () => {
     const user = setup()
-    await user.click(screen.getByRole('button', { name: 'General speakers list' }))
+    await chooseMode(user, 'General speakers list')
     await user.click(dialog().getByRole('button', { name: 'Start' }))
-    await user.click(screen.getByRole('button', { name: 'Unmoderated caucus' }))
+    await chooseMode(user, 'Unmoderated caucus')
     expect(dialog().getByText('This ends the current debate and clears its speakers list.')).toBeInTheDocument()
     await user.click(dialog().getByRole('button', { name: 'Start' }))
     expect(cur.state.debate.mode).toBe('unmod')

@@ -19,9 +19,9 @@ export function SpeakersPanel() {
   const add = (id: string) => dispatch({ type: 'speakers/add', id })
 
   return (
-    <section className="speakers card" aria-label="Speakers list">
+    <section className="speakers panel" aria-label="Speakers list">
       <h3 className="speakers-heading">
-        Speakers list <span className="badge">{queue.length}</span>
+        Speakers <span className="badge">{queue.length}</span>
       </h3>
       <DelegateSelect
         label="Add speaker"
@@ -32,12 +32,12 @@ export function SpeakersPanel() {
         onChange={(id) => id && add(id)}
       />
       {queue.length === 0 ? (
-        <p className="muted">The speakers list is empty.</p>
+        <p className="muted">Add a speaker to start the list.</p>
       ) : (
         <ol className="speakers-queue">
           {queue.map((d, i) => (
             <li key={d.id} className="speakers-item" aria-label={d.name}>
-              <span className="speakers-pos">{i + 1}.</span>
+              <span className="speakers-pos">{i + 1}</span>
               <span className="speakers-name">
                 <DelegateChip delegate={d} />
               </span>
@@ -61,6 +61,7 @@ export function SpeakersPanel() {
                 <Button
                   variant="ghost"
                   size="sm"
+                  className="speakers-icon"
                   aria-label={`Move ${d.name} up`}
                   disabled={i === 0}
                   onClick={() => dispatch({ type: 'speakers/move', id: d.id, direction: -1 })}
@@ -70,6 +71,7 @@ export function SpeakersPanel() {
                 <Button
                   variant="ghost"
                   size="sm"
+                  className="speakers-icon"
                   aria-label={`Move ${d.name} down`}
                   disabled={i === queue.length - 1}
                   onClick={() => dispatch({ type: 'speakers/move', id: d.id, direction: 1 })}
@@ -79,6 +81,7 @@ export function SpeakersPanel() {
                 <Button
                   variant="ghost"
                   size="sm"
+                  className="speakers-icon"
                   aria-label={`Remove ${d.name} from speakers list`}
                   onClick={() => dispatch({ type: 'speakers/remove', id: d.id })}
                 >
@@ -90,10 +93,8 @@ export function SpeakersPanel() {
         </ol>
       )}
       {yetToSpeak.length > 0 && (
-        <div className="col">
-          <h4 className="speakers-subheading">
-            Yet to speak <span className="badge">{yetToSpeak.length}</span>
-          </h4>
+        <details className="speakers-yetwrap">
+          <summary>{`Yet to speak (${yetToSpeak.length})`}</summary>
           <div className="speakers-yet">
             {yetToSpeak.map((d) => (
               <button
@@ -107,7 +108,7 @@ export function SpeakersPanel() {
               </button>
             ))}
           </div>
-        </div>
+        </details>
       )}
       {spoken.length > 0 && (
         <details className="speakers-spoken">

@@ -2,11 +2,12 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useCommittee } from '../../state/CommitteeContext'
 import { delegateById } from '../../state/selectors'
 import { scoreInteraction } from '../../domain/scoring'
-import { isExpired, isRunning, remainingMs } from '../../domain/timer'
+import { formatTime, isExpired, isRunning, remainingMs } from '../../domain/timer'
 import type { InteractionKind, Tier } from '../../domain/types'
 import { useNow } from '../../hooks/useNow'
 import { Button } from '../../components/ui/Button'
-import { TierButtons } from '../../components/ui/TierButtons'
+import { PipRater } from '../../components/ui/PipRater'
+import { Placard } from '../../components/ui/Placard'
 import { TimerDisplay } from '../../components/ui/TimerDisplay'
 import { TimeInput } from '../../components/ui/TimeInput'
 import { DelegateChip } from '../../components/ui/DelegateChip'
@@ -148,130 +149,115 @@ export function SpeechPanel() {
   const linkedTier = (kind: 'poi_answer' | 'follow_up', poiId: string): Tier | null =>
     state.interactions.find((i) => i.kind === kind && i.refId === poiId)?.tier ?? null
 
+  const ratePoints = (kind: InteractionKind) => (tier: Tier) =>
+    scoreInteraction({ kind, tier, passed: false }, state.scoring)
+
   return (
     <section className="speech" aria-label="Current speech">
-      <div className="card speech-card speech-timers">
-        <TimerDisplay timer={speechTimer} now={now} label="Speech" size="md" />
-        <div className="speech-controls">
-          <Button variant="primary" onClick={toggle}>
-            {running ? 'Pause' : 'Start'}
-          </Button>
-          <Button onClick={() => dispatch({ type: 'timer', which: 'speech', op: 'reset', now: Date.now() })}>
-            Reset
-          </Button>
-          <Button
-            aria-label="Add 15 seconds"
-            onClick={() => dispatch({ type: 'timer', which: 'speech', op: 'add', seconds: 15, now: Date.now() })}
-          >
-            +15s
-          </Button>
-          <Button
-            aria-label="Remove 15 seconds"
-            onClick={() => dispatch({ type: 'timer', which: 'speech', op: 'add', seconds: -15, now: Date.now() })}
-          >
-            −15s
-          </Button>
+      <div className="speech-stage">
+        <div className="speech-floor">
+          {speaker ? (
+            <Placard delegate={speaker} size="lg" />
+          ) : (
+            <div className="speech-nofloor">
+              <p className="speech-nofloor-title muted">No one has the floor.</p>
+              <p className="muted">Add a speaker, then give them the floor.</p>
+            </div>
+          )}
         </div>
-        <TimeInput
-          label="Speaker time"
-          seconds={debate.speakerSeconds}
-          presets={[30, 45, 60, 90, 120]}
-          onChange={(s) => dispatch({ type: 'timer', which: 'speech', op: 'set', seconds: s, now: Date.now() })}
-        />
-        <label className="speech-sound">
-          <input type="checkbox" checked={sound} onChange={(e) => setSound(e.target.checked)} />
-          Sound when time is up
-        </label>
-        {caucusTimer !== null && (
-          <div className="speech-caucus">
-            <TimerDisplay timer={caucusTimer} now={now} label="Caucus time" size="sm" />
-            <Button onClick={() => dispatch({ type: 'timer', which: 'caucus', op: 'toggle', now: Date.now() })}>
-              {isRunning(caucusTimer) ? 'Pause caucus clock' : 'Start caucus clock'}
-            </Button>
-            <Button
-              aria-label="Add 1 minute to caucus"
-              onClick={() => dispatch({ type: 'timer', which: 'caucus', op: 'add', seconds: 60, now: Date.now() })}
-            >
-              +1:00
-            </Button>
-            <span className="muted">
-              ≈ {caucusLeft} speaker(s) left
-            </span>
-          </div>
-        )}
+        <div className="speech-clock">
+          <TimerDisplay timer={speechTimer} now={now} label="Speech" size="xl" />
+        </div>
       </div>
 
-      <div className="card speech-card speech-floor-card">
-        {speaker ? (
-          <div className="speech-floor">
-            <DelegateChip delegate={speaker} size={40} />
-            <span className="muted">has the floor</span>
-          </div>
-        ) : (
-          <p className="muted">No one has the floor.</p>
-        )}
-        {speaker && (
-          <div className="speech-rate">
-            <span className="speech-label">Rate this speech</span>
-            <TierButtons
-              selected={speechInteraction?.tier ?? null}
-              points={(tier) => scoreInteraction({ kind: speechKind, tier, passed: false }, state.scoring)}
-              onPick={rateSpeech}
+      <div className="speech-controls">
+        <Button variant="primary" size="lg" onClick={toggle}>
+          {running ? 'Pause' : 'Start'}
+        </Button>
+        <Button size="lg" onClick={advance} disabled={speakerId === null && debate.speakersList.length === 0}>
+          {advanceLabel}
+          <kbd>N</kbd>
+        </Button>
+        <details className="speech-adjust">
+          <summary>Adjust</summary>
+          <div className="speech-adjust-body">
+            <div className="speech-adjust-row">
+              <Button onClick={() => dispatch({ type: 'timer', which: 'speech', op: 'reset', now: Date.now() })}>
+                Reset
+              </Button>
+              <Button
+                aria-label="Add 15 seconds"
+                onClick={() => dispatch({ type: 'timer', which: 'speech', op: 'add', seconds: 15, now: Date.now() })}
+              >
+                +15s
+              </Button>
+              <Button
+                aria-label="Remove 15 seconds"
+                onClick={() => dispatch({ type: 'timer', which: 'speech', op: 'add', seconds: -15, now: Date.now() })}
+              >
+                −15s
+              </Button>
+            </div>
+            <TimeInput
+              label="Speaker time"
+              seconds={debate.speakerSeconds}
+              presets={[30, 45, 60, 90, 120]}
+              onChange={(s) => dispatch({ type: 'timer', which: 'speech', op: 'set', seconds: s, now: Date.now() })}
             />
-            {speechInteraction && (
-              <div>
+            <label className="speech-sound">
+              <input type="checkbox" checked={sound} onChange={(e) => setSound(e.target.checked)} />
+              Sound when time is up
+            </label>
+            {caucusTimer !== null && (
+              <div className="speech-adjust-row">
+                <Button onClick={() => dispatch({ type: 'timer', which: 'caucus', op: 'toggle', now: Date.now() })}>
+                  {isRunning(caucusTimer) ? 'Pause caucus clock' : 'Start caucus clock'}
+                </Button>
                 <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => dispatch({ type: 'interaction/remove', id: speechInteraction.id })}
+                  aria-label="Add 1 minute to caucus"
+                  onClick={() => dispatch({ type: 'timer', which: 'caucus', op: 'add', seconds: 60, now: Date.now() })}
                 >
-                  Clear rating
+                  +1:00
                 </Button>
               </div>
             )}
           </div>
-        )}
-        <Button
-          variant="primary"
-          size="lg"
-          onClick={advance}
-          disabled={speakerId === null && debate.speakersList.length === 0}
-        >
-          {advanceLabel}
-          <kbd>N</kbd>
-        </Button>
+        </details>
       </div>
 
+      {caucusTimer !== null && (
+        <p
+          className={`speech-caucus-line${
+            isExpired(caucusTimer, now) ? ' is-expired' : remainingMs(caucusTimer, now) <= 10_000 ? ' is-warning' : ''
+          }`}
+        >
+          Caucus <span className="tabular">{formatTime(remainingMs(caucusTimer, now))}</span>
+          {`, about ${caucusLeft} speaker(s) left`}
+        </p>
+      )}
+
+      {speaker && (
+        <div className="speech-rate">
+          <span className="speech-caption">Speech</span>
+          <PipRater
+            label="Rate this speech"
+            size="md"
+            showLabel
+            value={speechInteraction?.tier ?? null}
+            points={ratePoints(speechKind)}
+            onPick={rateSpeech}
+            onClear={
+              speechInteraction
+                ? () => dispatch({ type: 'interaction/remove', id: speechInteraction.id })
+                : undefined
+            }
+          />
+        </div>
+      )}
+
       {showPoi && (
-        <div className="card speech-card speech-pois">
+        <div className="speech-pois">
           <h3>Points of information</h3>
-          <div className="speech-add">
-            <DelegateSelect
-              label="POI from"
-              placeholder="Who is asking?"
-              delegates={present}
-              excludeIds={speakerId ? [speakerId] : []}
-              value={asker}
-              onChange={setAsker}
-            />
-            <span className="speech-label">Rate the question</span>
-            <TierButtons
-              disabled={!asker}
-              points={(tier) => scoreInteraction({ kind: 'poi_asked', tier, passed: false }, state.scoring)}
-              onPick={(tier) => {
-                if (!asker) return
-                dispatch({
-                  type: 'interaction/add',
-                  delegateId: asker,
-                  kind: 'poi_asked',
-                  tier,
-                  refId: debate.speechRef ?? undefined,
-                  now: Date.now(),
-                })
-                setAsker(null)
-              }}
-            />
-          </div>
           {pois.length === 0 ? (
             <p className="muted">No POIs logged for this speech yet.</p>
           ) : (
@@ -281,31 +267,36 @@ export function SpeechPanel() {
                 const name = askerName?.name ?? poi.delegateId
                 return (
                   <li key={poi.id} className="speech-poi" aria-label={`POI from ${name}`}>
-                    {askerName ? <DelegateChip delegate={askerName} /> : <span>{name}</span>}
-                    <div className="speech-poi-group" role="group" aria-label="Question quality">
-                      <span className="speech-label">Question</span>
-                      <TierButtons
-                        compact
-                        selected={poi.tier}
+                    <span className="speech-poi-asker">
+                      {askerName ? <DelegateChip delegate={askerName} /> : <span>{name}</span>}
+                    </span>
+                    <span className="speech-poi-rating">
+                      <span className="speech-caption">Question</span>
+                      <PipRater
+                        label="Question quality"
+                        size="sm"
+                        value={poi.tier}
                         onPick={(tier) => dispatch({ type: 'interaction/update', id: poi.id, patch: { tier } })}
                       />
-                    </div>
-                    <div className="speech-poi-group" role="group" aria-label="Answer quality">
-                      <span className="speech-label">Answer</span>
-                      <TierButtons
-                        compact
-                        selected={linkedTier('poi_answer', poi.id)}
+                    </span>
+                    <span className="speech-poi-rating">
+                      <span className="speech-caption">Answer</span>
+                      <PipRater
+                        label="Answer quality"
+                        size="sm"
+                        value={linkedTier('poi_answer', poi.id)}
                         onPick={(tier) => rateLinked('poi_answer', poi.id, speakerId as string, tier)}
                       />
-                    </div>
-                    <div className="speech-poi-group" role="group" aria-label="Follow-up quality">
-                      <span className="speech-label">Follow-up</span>
-                      <TierButtons
-                        compact
-                        selected={linkedTier('follow_up', poi.id)}
+                    </span>
+                    <span className="speech-poi-rating">
+                      <span className="speech-caption">Follow-up</span>
+                      <PipRater
+                        label="Follow-up quality"
+                        size="sm"
+                        value={linkedTier('follow_up', poi.id)}
                         onPick={(tier) => rateLinked('follow_up', poi.id, poi.delegateId, tier)}
                       />
-                    </div>
+                    </span>
                     <Button
                       variant="ghost"
                       size="sm"
@@ -320,13 +311,47 @@ export function SpeechPanel() {
                         })
                       }}
                     >
-                      Remove
+                      ✕
                     </Button>
                   </li>
                 )
               })}
             </ul>
           )}
+          <div className="speech-add">
+            <div className="speech-add-select">
+              <DelegateSelect
+                label="POI from"
+                placeholder="Add a POI: who is asking?"
+                delegates={present}
+                excludeIds={speakerId ? [speakerId] : []}
+                value={asker}
+                onChange={setAsker}
+              />
+            </div>
+            {asker && (
+              <span className="speech-poi-rating">
+                <span className="speech-caption">Rate the question</span>
+                <PipRater
+                  label="Rate the question"
+                  size="md"
+                  value={null}
+                  points={ratePoints('poi_asked')}
+                  onPick={(tier) => {
+                    dispatch({
+                      type: 'interaction/add',
+                      delegateId: asker,
+                      kind: 'poi_asked',
+                      tier,
+                      refId: debate.speechRef ?? undefined,
+                      now: Date.now(),
+                    })
+                    setAsker(null)
+                  }}
+                />
+              </span>
+            )}
+          </div>
         </div>
       )}
     </section>
