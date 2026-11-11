@@ -1,4 +1,5 @@
 import { Button } from '../components/ui/Button';
+import { Placard } from '../components/ui/Placard';
 import { DelegateChip } from '../components/ui/DelegateChip';
 import { CATEGORY_LABELS, type Category } from '../domain/scoring';
 import { buildSummary, summaryCsv } from '../domain/summary';
@@ -91,13 +92,21 @@ export function SummaryScreen() {
     return OVERALL.has(award.title) || !cat ? d.total : d.byCategory[cat];
   };
 
+  const lead = summary.awards.find((a) => OVERALL.has(a.title)) ?? summary.awards[0];
+  const rest = summary.awards.filter((a) => a !== lead);
+
   return (
     <main className="summary">
       <header className="summary-head">
         <div>
           <h1>Conference summary</h1>
-          {state.name ? <p className="summary-committee">{state.name}</p> : null}
-          {state.topic ? <p className="muted">{state.topic}</p> : null}
+          {state.name || state.topic ? (
+            <p className="muted summary-sub">
+              {state.name ? <span>{state.name}</span> : null}
+              {state.name && state.topic ? ' ' : null}
+              {state.topic ? <span>{state.topic}</span> : null}
+            </p>
+          ) : null}
         </div>
         <div className="summary-actions">
           <Button onClick={() => dispatch({ type: 'committee/setStage', stage: 'running' })}>
@@ -132,23 +141,44 @@ export function SummaryScreen() {
           <p className="muted">No points were recorded, so there are no awards to suggest.</p>
         ) : (
           <div className="summary-awards">
-            {summary.awards.map((a) => (
-              <div key={a.title} className="card summary-award" role="group" aria-label={a.title}>
-                <h3>{a.title}</h3>
+            {lead ? (
+              <div className="summary-lead" role="group" aria-label={lead.title}>
+                <h3>{lead.title}</h3>
                 <ul>
-                  {a.delegateIds.map((id) => {
+                  {lead.delegateIds.map((id) => {
                     const d = byId.get(id);
                     if (!d) return null;
                     return (
                       <li key={id}>
-                        <DelegateChip delegate={d} size={32} />
-                        <span className="summary-award-pts">{pointsText(figure(a, d))}</span>
+                        <Placard delegate={d} size="lg" />
+                        <span className="summary-award-pts muted">{pointsText(figure(lead, d))}</span>
                       </li>
                     );
                   })}
                 </ul>
               </div>
-            ))}
+            ) : null}
+            {rest.length > 0 ? (
+              <div className="summary-award-list">
+                {rest.map((a) => (
+                  <div key={a.title} className="summary-award" role="group" aria-label={a.title}>
+                    <h3>{a.title}</h3>
+                    <ul>
+                      {a.delegateIds.map((id) => {
+                        const d = byId.get(id);
+                        if (!d) return null;
+                        return (
+                          <li key={id}>
+                            <DelegateChip delegate={d} />
+                            <span className="summary-award-pts muted">{pointsText(figure(a, d))}</span>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            ) : null}
           </div>
         )}
         <p className="muted summary-note">
@@ -175,8 +205,8 @@ export function SummaryScreen() {
             </thead>
             <tbody>
               {summary.delegates.map((d) => (
-                <tr key={d.delegateId}>
-                  <td className="summary-left summary-num">{d.rank}</td>
+                <tr key={d.delegateId} className={d.total > 0 && d.rank <= 3 ? `summary-rank-${d.rank}` : undefined}>
+                  <td className="summary-left summary-num summary-rank">{d.rank}</td>
                   <td className="summary-left">
                     <DelegateChip delegate={d} />
                   </td>
@@ -200,7 +230,7 @@ export function SummaryScreen() {
           {summary.delegates.map((d) => (
             <article
               key={d.delegateId}
-              className="card summary-report"
+              className="summary-report"
               aria-label={`Report for ${d.name}`}
             >
               <header>

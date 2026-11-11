@@ -64,7 +64,8 @@ describe('ResolutionsPanel', () => {
 
   it('renames', async () => {
     const user = setup(initial(withRes))
-    await user.click(screen.getByRole('button', { name: 'Rename' }))
+    await user.click(screen.getByRole('button', { name: 'More for DR 1.1' }))
+    await user.click(screen.getByRole('menuitem', { name: 'Rename' }))
     const input = screen.getByLabelText('Resolution name for DR 1.1')
     await user.clear(input)
     await user.type(input, 'DR 2.0{Enter}')
@@ -107,11 +108,12 @@ describe('ResolutionsPanel', () => {
   it('adds an amendment with interaction, one undo step; absent not offered', async () => {
     const user = setup(initial(withRes))
     const art = screen.getByRole('article', { name: 'DR 1.1' })
+    expect(within(art).getByRole('radiogroup', { name: 'Quality of the amendment' })).toBeInTheDocument()
     await user.click(within(art).getByLabelText('Amendment proposer for DR 1.1'))
     expect(screen.queryByRole('option', { name: /France/ })).not.toBeInTheDocument()
     await user.click(screen.getByRole('option', { name: /Kenya/ }))
     await user.type(within(art).getByLabelText('Amendment'), 'Strike clause 3')
-    await user.click(within(art).getByRole('button', { name: /Insightful/ }))
+    await user.click(within(within(art).getByRole('radiogroup', { name: 'Quality of the amendment' })).getByRole('radio', { name: /Insightful/ }))
     await user.click(within(art).getByRole('button', { name: 'Add amendment' }))
     const am = cur.state.resolutions[0].amendments[0]
     expect(am.description).toBe('Strike clause 3')
@@ -189,7 +191,8 @@ describe('ResolutionsPanel', () => {
 
   it('deletes a resolution with its amendment interactions', async () => {
     const user = setup(initial(withAmend))
-    await user.click(screen.getByRole('button', { name: 'Delete' }))
+    await user.click(screen.getByRole('button', { name: 'More for DR 1.1' }))
+    await user.click(screen.getByRole('menuitem', { name: 'Delete' }))
     expect(screen.getByText(/Delete DR 1.1\?/)).toBeInTheDocument()
     await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Delete' }))
     expect(cur.state.resolutions).toHaveLength(0)

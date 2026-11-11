@@ -8,6 +8,8 @@ import { useCommittee } from '../../state/CommitteeContext';
 import { useNow } from '../../hooks/useNow';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
+import { Menu } from '../../components/ui/Menu';
+import { PipRater } from '../../components/ui/PipRater';
 import { TierButtons } from '../../components/ui/TierButtons';
 import { TimerDisplay } from '../../components/ui/TimerDisplay';
 import { TimeInput } from '../../components/ui/TimeInput';
@@ -72,7 +74,7 @@ export function AmendmentSpeechModal({
   return (
     <Modal title="Amendment speech" onClose={close} footer={<Button variant="primary" onClick={close}>Done</Button>}>
       <div className="res-modal">
-        <p style={{ margin: 0 }}>{amendment.description}</p>
+        <p className="res-modal-desc">{amendment.description}</p>
         <DelegateSelect
           delegates={present(state.delegates)}
           value={speakerId}
@@ -82,12 +84,14 @@ export function AmendmentSpeechModal({
         />
         <div className="res-modal-timer">
           <TimerDisplay timer={state.debate.speechTimer} now={now} size="md" label="Speech" />
-          <Button onClick={() => dispatch({ type: 'timer', which: 'speech', op: 'toggle', now: Date.now() })}>
+          <div className="row">
+          <Button variant="primary" onClick={() => dispatch({ type: 'timer', which: 'speech', op: 'toggle', now: Date.now() })}>
             {running ? 'Pause' : 'Start'}
           </Button>
           <Button variant="ghost" onClick={() => dispatch({ type: 'timer', which: 'speech', op: 'reset', now: Date.now() })}>
             Reset
           </Button>
+          </div>
         </div>
         <TimeInput
           label="Speaker time"
@@ -146,17 +150,19 @@ function PeopleGroup({
             </Button>
           </span>
         ))}
+        <div className="res-combo">
+          <DelegateSelect
+            delegates={state.delegates}
+            value={null}
+            label={`Add ${singular} to ${res.name}`}
+            placeholder={`Add ${singular}…`}
+            excludeIds={[...res.sponsorIds, ...res.signatoryIds]}
+            onChange={(id) => {
+              if (id) set([...ids, id]);
+            }}
+          />
+        </div>
       </div>
-      <DelegateSelect
-        delegates={state.delegates}
-        value={null}
-        label={`Add ${singular} to ${res.name}`}
-        placeholder={`Add ${singular}…`}
-        excludeIds={[...res.sponsorIds, ...res.signatoryIds]}
-        onChange={(id) => {
-          if (id) set([...ids, id]);
-        }}
-      />
     </div>
   );
 }
@@ -199,17 +205,17 @@ function AmendmentForm({ res }: { res: Resolution }) {
           onChange={(e) => setText(e.target.value)}
         />
       </label>
-      <div>
-        <div className="res-label">Quality of the amendment</div>
-        <div role="group" aria-label="Quality of the amendment">
-          <TierButtons
-            selected={tier}
-            onPick={setTier}
-            points={(t) => scoreInteraction({ kind: 'amendment_proposed', tier: t, passed: false }, state.scoring)}
-          />
-        </div>
+      <div className="res-quality">
+        <span className="res-caption" aria-hidden="true">Quality</span>
+        <PipRater
+          label="Quality of the amendment"
+          size="md"
+          value={tier}
+          onPick={setTier}
+          points={(t) => scoreInteraction({ kind: 'amendment_proposed', tier: t, passed: false }, state.scoring)}
+        />
       </div>
-      <Button variant="primary" disabled={!ok} onClick={add}>
+      <Button disabled={!ok} onClick={add}>
         Add amendment
       </Button>
     </div>
@@ -246,7 +252,7 @@ function ResolutionCard({ res }: { res: Resolution }) {
   const voteAm = res.amendments.find((a) => a.id === voteAmendment);
 
   return (
-    <article className="card res-card" aria-label={res.name}>
+    <article className="res-card" aria-label={res.name}>
       <div className="res-head">
         {renaming ? (
           <input
@@ -264,19 +270,35 @@ function ResolutionCard({ res }: { res: Resolution }) {
         ) : (
           <>
             <h3 className="res-name">{res.name}</h3>
-            <span className={`badge res-status res-status-${res.status}`}>{STATUS_LABEL[res.status]}</span>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                setDraftName(res.name);
-                setRenaming(true);
-              }}
-            >
-              Rename
-            </Button>
+            <span className={`res-status res-status-${res.status}`}>{STATUS_LABEL[res.status]}</span>
           </>
         )}
+        <div className="res-actions">
+          {res.status === 'draft' || res.status === 'presented' ? (
+            <Button variant="primary" onClick={presentIt}>
+              Present
+            </Button>
+          ) : null}
+          <Button onClick={() => setVoting(true)}>Vote on resolution</Button>
+          <Menu
+            label={`More for ${res.name}`}
+            variant="ghost"
+            size="sm"
+            align="right"
+            items={[
+              {
+                label: 'Rename',
+                onSelect: () => {
+                  setDraftName(res.name);
+                  setRenaming(true);
+                },
+              },
+              { label: 'Delete', danger: true, onSelect: () => setConfirmDelete(true) },
+            ]}
+          >
+            ⋯
+          </Menu>
+        </div>
       </div>
 
       <div className="res-people">
@@ -284,24 +306,14 @@ function ResolutionCard({ res }: { res: Resolution }) {
         <PeopleGroup res={res} field="signatoryIds" singular="signatory" title="Signatories" />
       </div>
 
-      <div className="res-actions">
-        {res.status === 'draft' || res.status === 'presented' ? (
-          <Button variant="primary" onClick={presentIt}>
-            Present
-          </Button>
-        ) : null}
-        <Button onClick={() => setVoting(true)}>Vote on resolution</Button>
-        <Button variant="ghost" className="res-delete" onClick={() => setConfirmDelete(true)}>
-          Delete
-        </Button>
-      </div>
-      <p className="muted res-help">
-        Present opens the debate screen with the sponsors queued; speeches there are scored as resolution speeches.
-      </p>
+      {res.status === 'draft' ? (
+        <p className="muted res-help">
+          Present opens the debate screen with the sponsors queued; speeches there are scored as resolution speeches.
+        </p>
+      ) : null}
 
       <div className="res-amendments">
         <h4>Amendments ({res.amendments.length})</h4>
-        <AmendmentForm res={res} />
         <ul className="res-amend-list">
           {res.amendments.map((a) => {
             const proposer = state.delegates.find((d) => d.id === a.proposerId);
@@ -309,12 +321,12 @@ function ResolutionCard({ res }: { res: Resolution }) {
               <li key={a.id} className="res-amend" aria-label={`Amendment: ${a.description}`}>
                 <span className="res-amend-text">{a.description}</span>
                 {proposer ? <DelegateChip delegate={proposer} /> : null}
-                <span className={`badge res-status res-status-${a.status}`}>{AMEND_LABEL[a.status]}</span>
-                <Button size="sm" onClick={() => setSpeechAmendment(a.id)}>
+                <span className={`res-status res-status-${a.status}`}>{AMEND_LABEL[a.status]}</span>
+                <Button size="sm" variant="ghost" onClick={() => setSpeechAmendment(a.id)}>
                   Speech
                 </Button>
                 {a.status === 'pending' ? (
-                  <Button size="sm" onClick={() => setVoteAmendment(a.id)}>
+                  <Button size="sm" variant="ghost" onClick={() => setVoteAmendment(a.id)}>
                     Vote
                   </Button>
                 ) : null}
@@ -324,12 +336,13 @@ function ResolutionCard({ res }: { res: Resolution }) {
                   aria-label={`Remove amendment: ${a.description}`}
                   onClick={() => dispatch({ type: 'amendment/remove', resolutionId: res.id, id: a.id })}
                 >
-                  Remove
+                  ✕
                 </Button>
               </li>
             );
           })}
         </ul>
+        <AmendmentForm res={res} />
       </div>
 
       {voting ? (
@@ -402,29 +415,26 @@ export function ResolutionsPanel() {
   return (
     <section className="res" aria-label="Resolutions">
       <h2>Resolutions</h2>
-      <div className="card res-add">
-        <h3>Add a draft resolution</h3>
-        <form
-          className="res-add-row"
-          onSubmit={(e) => {
-            e.preventDefault();
-            add();
-          }}
-        >
-          <label className="res-field">
-            Resolution name
-            <input
-              type="text"
-              placeholder="e.g. Draft Resolution 1.1"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
-          </label>
-          <Button type="submit" variant="primary" disabled={name.trim() === ''}>
-            Add resolution
-          </Button>
-        </form>
-      </div>
+      <form
+        className="res-add-row"
+        onSubmit={(e) => {
+          e.preventDefault();
+          add();
+        }}
+      >
+        <label className="res-field">
+          Resolution name
+          <input
+            type="text"
+            placeholder="e.g. Draft Resolution 1.1"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
+        </label>
+        <Button type="submit" variant="primary" disabled={name.trim() === ''}>
+          Add resolution
+        </Button>
+      </form>
       {state.resolutions.length === 0 ? <p className="muted">No draft resolutions yet.</p> : null}
       {state.resolutions.map((r) => (
         <ResolutionCard key={r.id} res={r} />

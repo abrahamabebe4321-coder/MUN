@@ -36,7 +36,7 @@ export function LeaderboardPanel() {
   return (
     <section className="lb" aria-label="Leaderboard">
       <div className="lb-head">
-        <h2>Leaderboard</h2>
+        <h2>Scores</h2>
         <p className="muted">Private to the chair — never shown on the projector.</p>
       </div>
 
@@ -70,7 +70,7 @@ export function LeaderboardPanel() {
                   .join(' ');
                 return (
                   <tr key={r.delegateId} className={cls} onClick={() => setOpenId(r.delegateId)}>
-                    <td className="lb-left lb-num">{r.rank}</td>
+                    <td className="lb-left lb-num lb-rank">{r.rank}</td>
                     <td className="lb-left">
                       <button
                         type="button"
@@ -96,8 +96,8 @@ export function LeaderboardPanel() {
         </div>
       )}
 
-      <div className="card lb-recent">
-        <h3>Recent activity</h3>
+      <details className="lb-recent">
+        <summary>{`Recent activity (${recent.length})`}</summary>
         {recent.length === 0 ? (
           <p className="muted">Nothing logged yet.</p>
         ) : (
@@ -111,8 +111,8 @@ export function LeaderboardPanel() {
                 <li key={i.id}>
                   <DelegateChip delegate={d ?? { name, flag: null }} />
                   <span>{KIND_LABELS[i.kind]}</span>
-                  {flat ? null : <span className={`lb-tier-${i.tier}`}>{TIER_LABELS[i.tier]}</span>}
-                  <span className={`lb-pts${pts < 0 ? ' lb-neg' : ''}`}>{signed(pts)}</span>
+                  {flat ? null : <span className="lb-tier muted">{TIER_LABELS[i.tier]}</span>}
+                  <span className={`lb-pts tabular${pts < 0 ? ' lb-neg' : ''}`}>{signed(pts)}</span>
                   <Button
                     variant="ghost"
                     size="sm"
@@ -126,7 +126,7 @@ export function LeaderboardPanel() {
             })}
           </ul>
         )}
-      </div>
+      </details>
 
       {openId ? <DelegateLogModal delegateId={openId} onClose={() => setOpenId(null)} /> : null}
     </section>

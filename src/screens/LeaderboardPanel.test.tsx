@@ -51,6 +51,11 @@ const cells = (row: HTMLElement) => within(row).getAllByRole('cell');
 beforeEach(() => localStorage.clear());
 
 describe('LeaderboardPanel', () => {
+  it('shows the Scores heading', () => {
+    setup();
+    expect(screen.getByRole('heading', { name: 'Scores' })).toBeInTheDocument();
+  });
+
   it('orders rows and shows ranks and points', () => {
     setup();
     const rows = bodyRows();
@@ -88,7 +93,8 @@ describe('LeaderboardPanel', () => {
 
   it('lists recent activity newest first and deletes', async () => {
     const user = setup();
-    const items = within(screen.getByText('Recent activity').parentElement as HTMLElement).getAllByRole('listitem');
+    await user.click(screen.getByText('Recent activity (4)'));
+    const items = within(screen.getByText('Recent activity (4)').closest('details') as HTMLElement).getAllByRole('listitem');
     expect(items).toHaveLength(4);
     expect(items[0]).toHaveTextContent('Moderated caucus speech');
     expect(items[0]).toHaveTextContent('+6');
