@@ -309,6 +309,93 @@ describe('timer', () => {
   });
 });
 
+describe('speechRef', () => {
+  const gsl = () =>
+    run(withDelegates('a', 'b', 'c'), { type: 'debate/start', mode: 'gsl' }, { type: 'speakers/add', id: 'a' }, { type: 'speakers/add', id: 'b' });
+
+  it('is null when idle and at debate start', () => {
+    expect(createCommittee().debate.speechRef).toBeNull();
+    expect(gsl().debate.speechRef).toBeNull();
+  });
+
+  it('mints a unique ref per speaker and consumes nextId', () => {
+    let s = gsl();
+    const id0 = s.nextId;
+    s = run(s, { type: 'speakers/next' });
+    expect(s.debate.speechRef).toBe(`s${id0}`);
+    expect(s.nextId).toBe(id0 + 1);
+    const first = s.debate.speechRef;
+    s = run(s, { type: 'speakers/next' });
+    expect(s.debate.speechRef).toBe(`s${id0 + 1}`);
+    expect(s.debate.speechRef).not.toBe(first);
+    s = run(s, { type: 'speakers/setCurrent', id: 'c' });
+    expect(s.debate.speechRef).toBe(`s${id0 + 2}`);
+  });
+
+  it('clears on null speaker without touching nextId', () => {
+    let s = run(gsl(), { type: 'speakers/next' });
+    const n = s.nextId;
+    s = run(s, { type: 'speakers/next' }, { type: 'speakers/next' });
+    expect(s.debate.currentSpeakerId).toBeNull();
+    expect(s.debate.speechRef).toBeNull();
+    expect(s.nextId).toBe(n + 1);
+    s = run(s, { type: 'speakers/setCurrent', id: 'a' }, { type: 'speakers/setCurrent', id: null });
+    expect(s.debate.speechRef).toBeNull();
+  });
+
+  it('clears on debate start and on removal of the current speaker', () => {
+    let s = run(gsl(), { type: 'speakers/next' });
+    expect(s.debate.speechRef).not.toBeNull();
+    expect(run(s, { type: 'delegate/remove', id: 'b' }).debate.speechRef).toBe(s.debate.speechRef);
+    expect(run(s, { type: 'delegate/remove', id: 'a' }).debate.speechRef).toBeNull();
+    s = run(s, { type: 'debate/start', mode: 'mod' });
+    expect(s.debate.speechRef).toBeNull();
+  });
+});
+
+describe('timer both', () => {
+  const mod = () => run(createCommittee(), { type: 'debate/start', mode: 'mod', totalSeconds: 100, speakerSeconds: 30 });
+
+  it('start/pause/toggle drive both timers', () => {
+    let s = run(mod(), { type: 'timer', which: 'both', op: 'start', now: 1000 });
+    expect(s.debate.speechTimer.startedAt).toBe(1000);
+    expect(s.debate.caucusTimer?.startedAt).toBe(1000);
+    s = run(s, { type: 'timer', which: 'both', op: 'pause', now: 3000 });
+    expect(s.debate.speechTimer).toMatchObject({ elapsedMs: 2000, startedAt: null });
+    expect(s.debate.caucusTimer).toMatchObject({ elapsedMs: 2000, startedAt: null });
+    s = run(s, { type: 'timer', which: 'both', op: 'toggle', now: 4000 });
+    expect(s.debate.speechTimer.startedAt).toBe(4000);
+    expect(s.debate.caucusTimer?.startedAt).toBe(4000);
+    s = run(s, { type: 'timer', which: 'both', op: 'toggle', now: 5000 });
+    expect(s.debate.speechTimer.startedAt).toBeNull();
+    expect(s.debate.caucusTimer?.startedAt).toBeNull();
+  });
+
+  it('works without a caucus timer', () => {
+    let s = run(createCommittee(), { type: 'debate/start', mode: 'gsl' });
+    s = run(s, { type: 'timer', which: 'both', op: 'start', now: 10 });
+    expect(s.debate.speechTimer.startedAt).toBe(10);
+    expect(s.debate.caucusTimer).toBeNull();
+    s = run(s, { type: 'timer', which: 'both', op: 'toggle', now: 20 });
+    expect(s.debate.speechTimer).toMatchObject({ elapsedMs: 10, startedAt: null });
+    expect(s.debate.caucusTimer).toBeNull();
+  });
+
+  it('toggle follows the speech timer when they disagree', () => {
+    let s = run(mod(), { type: 'timer', which: 'caucus', op: 'start', now: 0 });
+    s = run(s, { type: 'timer', which: 'both', op: 'toggle', now: 50 });
+    expect(s.debate.speechTimer.startedAt).toBe(50);
+    expect(s.debate.caucusTimer?.startedAt).toBe(0);
+  });
+
+  it('unsupported ops return the same state', () => {
+    const s = mod();
+    for (const op of ['reset', 'add', 'set'] as const) {
+      expect(reducer(s, { type: 'timer', which: 'both', op, seconds: 5, now: 1 })).toBe(s);
+    }
+  });
+});
+
 describe('resolutions', () => {
   it('adds, enforces sponsor/signatory exclusivity', () => {
     let s = withDelegates('a', 'b', 'c');

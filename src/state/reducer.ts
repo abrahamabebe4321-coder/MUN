@@ -1,5 +1,5 @@
 import { tally } from '../domain/voting';
-import { addTime, createTimer, pause, reset, setDuration, start, toggle } from '../domain/timer';
+import { addTime, createTimer, isRunning, pause, reset, setDuration, start, toggle } from '../domain/timer';
 import type { TimerState } from '../domain/timer';
 import type {
   AmendmentStatus,
@@ -79,7 +79,7 @@ export type Action =
   | { type: 'speakers/setCurrent'; id: string | null }
   | {
       type: 'timer';
-      which: 'speech' | 'caucus';
+      which: 'speech' | 'caucus' | 'both';
       op: 'start' | 'pause' | 'toggle' | 'reset' | 'add' | 'set';
       seconds?: number;
       now: number;
@@ -143,6 +143,16 @@ function advanceSpeaker(debate: DebateState, nextId: string | null): DebateState
   };
 }
 
+function changeSpeaker(state: CommitteeState, nextSpeakerId: string | null): CommitteeState {
+  const debate = advanceSpeaker(state.debate, nextSpeakerId);
+  if (nextSpeakerId === null) return { ...state, debate: { ...debate, speechRef: null } };
+  return {
+    ...state,
+    debate: { ...debate, speechRef: `s${state.nextId}` },
+    nextId: state.nextId + 1,
+  };
+}
+
 export function reducer(state: CommitteeState, action: Action): CommitteeState {
   switch (action.type) {
     case 'committee/update':
@@ -200,6 +210,7 @@ export function reducer(state: CommitteeState, action: Action): CommitteeState {
           speakersList: d.speakersList.filter((x) => x !== id),
           spoken: d.spoken.filter((x) => x !== id),
           currentSpeakerId: d.currentSpeakerId === id ? null : d.currentSpeakerId,
+          speechRef: d.currentSpeakerId === id ? null : d.speechRef,
         },
       };
     }
@@ -353,6 +364,7 @@ export function reducer(state: CommitteeState, action: Action): CommitteeState {
           currentSpeakerId: null,
           spoken: [],
           resolutionId: action.resolutionId ?? null,
+          speechRef: null,
         },
       };
     }
@@ -392,11 +404,11 @@ export function reducer(state: CommitteeState, action: Action): CommitteeState {
     }
 
     case 'speakers/next':
-      return { ...state, debate: advanceSpeaker(state.debate, state.debate.speakersList[0] ?? null) };
+      return changeSpeaker(state, state.debate.speakersList[0] ?? null);
 
     case 'speakers/setCurrent': {
       if (action.id !== null && !hasDelegate(state, action.id)) return state;
-      return { ...state, debate: advanceSpeaker(state.debate, action.id) };
+      return changeSpeaker(state, action.id);
     }
 
     case 'timer': {
@@ -406,6 +418,20 @@ export function reducer(state: CommitteeState, action: Action): CommitteeState {
         return {
           ...state,
           debate: { ...d, caucusTimer: applyTimer(d.caucusTimer, action.op, action.seconds, action.now) },
+        };
+      }
+      if (action.which === 'both') {
+        const { op, now } = action;
+        if (op !== 'start' && op !== 'pause' && op !== 'toggle') return state;
+        const pausing = op === 'pause' || (op === 'toggle' && isRunning(d.speechTimer));
+        const f = pausing ? pause : start;
+        return {
+          ...state,
+          debate: {
+            ...d,
+            speechTimer: f(d.speechTimer, now),
+            caucusTimer: d.caucusTimer === null ? null : f(d.caucusTimer, now),
+          },
         };
       }
       const speechTimer = applyTimer(d.speechTimer, action.op, action.seconds, action.now);

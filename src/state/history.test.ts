@@ -58,4 +58,55 @@ describe('history', () => {
     h = run(h, { type: 'state/replace', state: other });
     expect(h).toEqual({ past: [], present: other, future: [] });
   });
+
+  describe('undo keeps live timers', () => {
+    const setup = () =>
+      run(
+        createHistory(
+          run(createHistory(createCommittee()), { type: 'delegate/add', id: 'a', name: 'A', flag: null }, { type: 'debate/start', mode: 'mod', totalSeconds: 100 }, { type: 'speakers/setCurrent', id: 'a' }).present,
+        ),
+      );
+
+    it('does not rewind the speech timer across an interaction undo', () => {
+      let h = run(setup(), { type: 'timer', which: 'speech', op: 'start', now: 1000 });
+      h = run(h, { type: 'interaction/add', delegateId: 'a', kind: 'mod_speech', tier: 1, now: 2000 });
+      h = run(h, { type: 'timer', which: 'speech', op: 'pause', now: 4000 });
+      h = run(h, { type: 'undo' });
+      expect(h.present.interactions).toHaveLength(0);
+      expect(h.present.debate.speechTimer).toMatchObject({ elapsedMs: 3000, startedAt: null });
+      const snap = h.future[0];
+      h = run(h, { type: 'redo' });
+      expect(h.present.interactions).toHaveLength(1);
+      expect(h.present.debate.speechTimer).toMatchObject({ elapsedMs: 3000, startedAt: null });
+      expect(snap.interactions).toHaveLength(1);
+    });
+
+    it('keeps the caucus timer live and does not mutate snapshots', () => {
+      let h = run(setup(), { type: 'committee/update', name: 'x' });
+      const snapCaucus = h.past[h.past.length - 1].debate.caucusTimer;
+      h = run(h, { type: 'timer', which: 'caucus', op: 'start', now: 500 });
+      h = run(h, { type: 'undo' });
+      expect(h.present.name).toBe('');
+      expect(h.present.debate.caucusTimer?.startedAt).toBe(500);
+      expect(snapCaucus?.startedAt).toBeNull();
+    });
+
+    it("restores the snapshot's own speech timer across a speaker change", () => {
+      let h = run(setup(), { type: 'delegate/add', id: 'b', name: 'B', flag: null });
+      h = run(h, { type: 'timer', which: 'speech', op: 'start', now: 100 });
+      const before = h.present.debate.speechTimer;
+      h = run(h, { type: 'speakers/setCurrent', id: 'b' });
+      h = run(h, { type: 'timer', which: 'speech', op: 'start', now: 900 });
+      h = run(h, { type: 'undo' });
+      expect(h.present.debate.currentSpeakerId).toBe('a');
+      expect(h.present.debate.speechTimer).toEqual(before);
+    });
+
+    it('restores the snapshot untouched when the mode differs', () => {
+      let h = run(setup(), { type: 'debate/start', mode: 'gsl' });
+      h = run(h, { type: 'undo' });
+      expect(h.present.debate.mode).toBe('mod');
+      expect(h.present.debate.caucusTimer).not.toBeNull();
+    });
+  });
 });

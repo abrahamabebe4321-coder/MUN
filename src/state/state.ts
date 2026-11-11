@@ -26,6 +26,8 @@ export interface DebateState {
   spoken: string[];
   /** Resolution being presented/debated when mode is 'resolution'. */
   resolutionId: string | null;
+  /** Unique reference for the current speech; interactions logged during it carry this as refId. Null when nobody has the floor. */
+  speechRef: string | null;
 }
 
 export type Stage = 'setup' | 'running' | 'ended';
@@ -59,6 +61,7 @@ export function idleDebate(speakerSeconds: number = DEFAULT_SPEAKER_SECONDS): De
     currentSpeakerId: null,
     spoken: [],
     resolutionId: null,
+    speechRef: null,
   };
 }
 
