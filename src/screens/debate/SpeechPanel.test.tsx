@@ -96,21 +96,67 @@ describe('SpeechPanel speech rating', () => {
 })
 
 describe('SpeechPanel POIs', () => {
-  async function addPoi(user: ReturnType<typeof userEvent.setup>) {
+  async function queue(user: ReturnType<typeof userEvent.setup>, name: RegExp) {
     await user.click(screen.getByRole('combobox', { name: 'POI from' }))
-    await user.click(screen.getByRole('option', { name: /Kenya/ }))
-    await user.click(within(screen.getByRole('radiogroup', { name: 'Rate the question' })).getByRole('radio', { name: /^Insightful/ }))
+    await user.click(screen.getByRole('option', { name }))
   }
-  it('excludes the speaker from asker options', async () => {
+  const rateQuestion = (user: ReturnType<typeof userEvent.setup>, name: string, tier: RegExp) =>
+    user.click(within(screen.getByRole('radiogroup', { name: `Rate question from ${name}` })).getByRole('radio', { name: tier }))
+
+  it('excludes the speaker and queued delegates from asker options', async () => {
     const user = setup()
     await user.click(screen.getByRole('combobox', { name: 'POI from' }))
     expect(screen.queryByRole('option', { name: /Ethiopia/ })).toBeNull()
     expect(screen.getByRole('option', { name: /Kenya/ })).toBeInTheDocument()
+    await user.click(screen.getByRole('option', { name: /Kenya/ }))
+    await user.click(screen.getByRole('combobox', { name: 'POI from' }))
+    expect(screen.queryByRole('option', { name: /Kenya/ })).toBeNull()
+    expect(screen.getByRole('option', { name: /United States/ })).toBeInTheDocument()
   })
-  it('logs question, answer, follow-up and removes them in one undo step', async () => {
+  it('queues several delegates in a row without scoring them', async () => {
     const user = setup()
-    expect(screen.getByText('No POIs logged for this speech yet.')).toBeInTheDocument()
-    await addPoi(user)
+    await queue(user, /Kenya/)
+    await queue(user, /United States/)
+    expect(cur.state.debate.poiQueue).toEqual(['ke', 'us'])
+    expect(kinds('poi_asked')).toHaveLength(0)
+    expect(screen.getAllByText('Waiting')).toHaveLength(2)
+    expect(screen.getByRole('radiogroup', { name: 'Rate question from Kenya' })).toBeInTheDocument()
+    expect(screen.queryByText('No POIs logged for this speech yet.')).toBeNull()
+  })
+  it('rating a queued question moves it to the rated list with points', async () => {
+    const user = setup()
+    await queue(user, /Kenya/)
+    await queue(user, /United States/)
+    await rateQuestion(user, 'Kenya', /^Insightful/)
+    expect(cur.state.debate.poiQueue).toEqual(['us'])
+    expect(kinds('poi_asked')).toHaveLength(1)
+    expect(kinds('poi_asked')[0]).toMatchObject({ delegateId: 'ke', tier: 3, refId: cur.state.debate.speechRef })
+    expect(screen.queryByRole('radiogroup', { name: 'Rate question from Kenya' })).toBeNull()
+    expect(screen.getByRole('radiogroup', { name: 'Rate question from United States' })).toBeInTheDocument()
+    expect(screen.getByRole('listitem', { name: 'POI from Kenya' })).toBeInTheDocument()
+  })
+  it('removes a queued delegate', async () => {
+    const user = setup()
+    await queue(user, /Kenya/)
+    await user.click(screen.getByRole('button', { name: 'Remove Kenya from POI queue' }))
+    expect(cur.state.debate.poiQueue).toEqual([])
+    expect(kinds('poi_asked')).toHaveLength(0)
+  })
+  it('resets the queue when the next speaker takes the floor', async () => {
+    const user = setup()
+    await queue(user, /United States/)
+    await user.click(screen.getByRole('button', { name: /Next speaker/ }))
+    expect(cur.state.debate.poiQueue).toEqual([])
+    expect(screen.queryByText('Waiting')).toBeNull()
+  })
+  it('opening speeches have no POI section', () => {
+    setup('opening')
+    expect(screen.queryByRole('combobox', { name: 'POI from' })).toBeNull()
+  })
+  it('logs answer and follow-up on a rated POI and removes them in one undo step', async () => {
+    const user = setup()
+    await queue(user, /Kenya/)
+    await rateQuestion(user, 'Kenya', /^Insightful/)
     const poi = kinds('poi_asked')[0]
     expect(poi).toMatchObject({ delegateId: 'ke', tier: 3, refId: cur.state.debate.speechRef })
     const row = screen.getByRole('listitem', { name: 'POI from Kenya' })

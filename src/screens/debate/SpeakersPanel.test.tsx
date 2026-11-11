@@ -130,3 +130,22 @@ describe('SpeakersPanel', () => {
     expect(within(details).getByText('Kenya')).toBeInTheDocument()
   })
 })
+
+describe('SpeakersPanel pinned last', () => {
+  it('tags the delegate who speaks last', () => {
+    const s = [
+      { type: 'speakers/add', id: 'ke' },
+      { type: 'speakers/pinLast', id: 'ke' },
+      { type: 'speakers/add', id: 'et' },
+    ].reduce((acc, a) => reducer(acc, a as Action), makeState())
+    render(
+      <CommitteeProvider initial={s}>
+        <SpeakersPanel />
+      </CommitteeProvider>,
+    )
+    const items = screen.getAllByRole('listitem')
+    expect(items[0]).toHaveAccessibleName('Ethiopia')
+    expect(items[1]).toHaveTextContent('speaks last')
+    expect(items[0]).not.toHaveTextContent('speaks last')
+  })
+})

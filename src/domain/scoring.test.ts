@@ -3,6 +3,8 @@ import {
   CATEGORY_LABELS,
   DEFAULT_SCORING,
   KIND_LABELS,
+  PENALTY_LABELS,
+  tierLabel,
   categoryOf,
   rankDelegates,
   scoreDelegates,
@@ -164,5 +166,14 @@ describe('rankDelegates', () => {
     );
     expect(r.map((x) => x.rank)).toEqual([1, 2, 2, 4]);
     expect(r[3].total).toBe(0);
+  });
+});
+
+describe('tierLabel', () => {
+  it('names penalty tiers by severity and others by quality', () => {
+    expect(PENALTY_LABELS).toEqual({ 1: 'Minor', 2: 'Serious', 3: 'Severe' });
+    expect(tierLabel('penalty', 3)).toBe('Severe');
+    expect(tierLabel('gsl_speech', 3)).toBe('Insightful');
+    expect(tierLabel('poi_asked', 1)).toBe('Works');
   });
 });

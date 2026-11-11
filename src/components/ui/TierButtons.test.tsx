@@ -19,6 +19,11 @@ describe('TierButtons', () => {
     expect(screen.getByRole('button', { name: 'Works (-4 points)' })).not.toHaveTextContent('+')
     expect(screen.getByRole('button', { name: 'Decent (6 points)' })).toHaveTextContent('+6')
   })
+  it('uses custom labels for text and aria-labels', () => {
+    render(<TierButtons onPick={() => {}} labels={{ 1: 'Minor', 2: 'Serious', 3: 'Severe' }} points={() => -2} />)
+    expect(screen.getByRole('button', { name: 'Serious (-2 points)' })).toHaveTextContent('Serious')
+    expect(screen.queryByRole('button', { name: /Works/ })).toBeNull()
+  })
   it('compact shows numbers only', () => {
     render(<TierButtons onPick={() => {}} compact />)
     expect(screen.getByRole('button', { name: 'Insightful' })).toHaveTextContent(/^3$/)

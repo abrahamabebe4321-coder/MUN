@@ -172,3 +172,37 @@ describe('ProjectorView', () => {
     expect(container.textContent).not.toMatch(/Insightful|points|Leaderboard/i);
   });
 });
+
+describe('ProjectorView POIs', () => {
+  it('lists queued POI names in order, capped at six, without ratings', () => {
+    saveState(
+      running([
+        { type: 'debate/start', mode: 'gsl', speakerSeconds: 60 },
+        { type: 'speakers/setCurrent', id: 'fr' },
+        ...(['de', 'jp', 'br', 'in', 'kr', 'mx', 'ca'] as const).map((id) => ({ type: 'poi/queue', id }) as Action),
+      ]),
+    );
+    render(<ProjectorView />);
+    expect(screen.getByText('Points of information')).toBeInTheDocument();
+    const names = ['Germany', 'Japan', 'Brazil', 'India', 'Korea', 'Mexico'];
+    for (const n of names) expect(screen.getByText(n)).toBeInTheDocument();
+    expect(screen.queryByText('Canada')).toBeNull();
+    expect(screen.getByText('+1 more')).toBeInTheDocument();
+  });
+  it('hides the line when nobody is queued', () => {
+    saveState(running([{ type: 'debate/start', mode: 'gsl' }]));
+    render(<ProjectorView />);
+    expect(screen.queryByText('Points of information')).toBeNull();
+  });
+  it('labels the fullscreen button and follows fullscreenchange', () => {
+    saveState(running());
+    render(<ProjectorView />);
+    expect(screen.getByRole('button', { name: 'Fullscreen' })).toBeInTheDocument();
+    Object.defineProperty(document, 'fullscreenElement', { value: document.body, configurable: true });
+    act(() => {
+      document.dispatchEvent(new Event('fullscreenchange'));
+    });
+    expect(screen.getByRole('button', { name: 'Exit fullscreen' })).toBeInTheDocument();
+    Object.defineProperty(document, 'fullscreenElement', { value: null, configurable: true });
+  });
+});

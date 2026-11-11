@@ -18,3 +18,5 @@
 .speakers-chip { font: inherit; font-size: 13px; color: inherit; background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: 2px var(--s3); cursor: pointer; }
 .speakers-chip:hover { background: var(--accent-soft); }
 .speakers-spoken-list { display: flex; flex-wrap: wrap; gap: var(--s2); }
+
+.speakers-pinned { display: block; font-size: 12px; line-height: 1.2; }

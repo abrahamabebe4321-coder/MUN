@@ -47,6 +47,13 @@ export const KIND_LABELS: Record<InteractionKind, string> = {
 
 export const TIER_LABELS: Record<Tier, string> = { 1: 'Works', 2: 'Decent', 3: 'Insightful' };
 
+export const PENALTY_LABELS: Record<Tier, string> = { 1: 'Minor', 2: 'Serious', 3: 'Severe' };
+
+/** Name of a tier for a given kind of interaction (penalties are graded by severity, not quality). */
+export function tierLabel(kind: InteractionKind, tier: Tier): string {
+  return kind === 'penalty' ? PENALTY_LABELS[tier] : TIER_LABELS[tier];
+}
+
 export type Category = 'speeches' | 'pois' | 'procedure' | 'resolutions' | 'conduct';
 
 export const CATEGORY_LABELS: Record<Category, string> = {

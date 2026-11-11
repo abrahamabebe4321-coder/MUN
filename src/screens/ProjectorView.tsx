@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { useStoredCommittee } from '../state/CommitteeContext';
 import type { CommitteeState } from '../state/state';
 import { useNow } from '../hooks/useNow';
@@ -16,6 +17,7 @@ const MODE_LABELS = {
 } as const;
 
 const MAX_QUEUE = 6;
+const MAX_POIS = 6;
 const MAX_MOTIONS = 4;
 const VOTE_BANNER_MS = 30_000;
 
@@ -32,9 +34,15 @@ function toggleFullscreen() {
 }
 
 function FullscreenButton() {
+  const [full, setFull] = useState(() => typeof document !== 'undefined' && !!document.fullscreenElement);
+  useEffect(() => {
+    const onChange = () => setFull(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', onChange);
+    return () => document.removeEventListener('fullscreenchange', onChange);
+  }, []);
   return (
     <button type="button" className="proj-fullscreen" onClick={toggleFullscreen}>
-      Fullscreen
+      {full ? 'Exit fullscreen' : 'Fullscreen'}
     </button>
   );
 }
@@ -68,6 +76,12 @@ function Content({ state, now }: { state: CommitteeState; now: number }) {
   });
   const shown = queue.slice(0, MAX_QUEUE);
   const more = queue.length - shown.length;
+  const poiQueue = (debate.poiQueue ?? []).flatMap((id) => {
+    const d = byId.get(id);
+    return d ? [d] : [];
+  });
+  const shownPois = poiQueue.slice(0, MAX_POIS);
+  const morePois = poiQueue.length - shownPois.length;
   const motions = orderMotions(state.motions);
   const shownMotions = motions.slice(0, MAX_MOTIONS);
   const moreMotions = motions.length - shownMotions.length;
@@ -97,6 +111,18 @@ function Content({ state, now }: { state: CommitteeState; now: number }) {
             <TimerDisplay timer={debate.speechTimer} now={now} size="xl" label="Speaking time" />
             {debate.caucusTimer && (
               <TimerDisplay timer={debate.caucusTimer} now={now} size="md" label="Caucus time" />
+            )}
+            {shownPois.length > 0 && (
+              <div className="proj-pois">
+                <span className="proj-pois-title">Points of information</span>
+                {shownPois.map((d) => (
+                  <span key={d.id} className="proj-poi">
+                    <Flag code={d.flag} size={32} />
+                    <span>{d.name}</span>
+                  </span>
+                ))}
+                {morePois > 0 && <span className="proj-more">{`+${morePois} more`}</span>}
+              </div>
             )}
           </div>
           <aside className="proj-side">

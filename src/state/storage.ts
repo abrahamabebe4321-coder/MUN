@@ -28,7 +28,12 @@ export function parseState(value: unknown): CommitteeState | null {
     if (!Array.isArray(v[key])) return null;
   }
   if (!isObject(v.scoring) || !isObject(v.debate)) return null;
-  return value as unknown as CommitteeState;
+  const debate = v.debate as Record<string, unknown>;
+  const pinned = typeof debate.pinnedLastId === 'string' ? debate.pinnedLastId : null;
+  const poiQueue = Array.isArray(debate.poiQueue)
+    ? debate.poiQueue.filter((x): x is string => typeof x === 'string')
+    : [];
+  return { ...v, debate: { ...debate, pinnedLastId: pinned, poiQueue } } as unknown as CommitteeState;
 }
 
 export function loadState(

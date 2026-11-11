@@ -103,7 +103,8 @@ describe('QuickLog', () => {
   it('penalty shows negative points', async () => {
     const user = setupBar()
     await user.click(screen.getByRole('button', { name: 'Penalty' }))
-    expect(screen.getByText('Minor / Serious / Severe')).toBeInTheDocument()
+    for (const n of ['Minor', 'Serious', 'Severe']) expect(screen.getByRole('button', { name: new RegExp(`^${n}`) })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^Works/ })).toBeNull()
     expect(screen.getByText('-2')).toBeInTheDocument()
     expect(screen.getByText('-6')).toBeInTheDocument()
   })

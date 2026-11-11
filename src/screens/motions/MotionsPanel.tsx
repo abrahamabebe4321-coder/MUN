@@ -40,6 +40,8 @@ export function outcomeActions(m: Motion, passed: boolean, now: number = Date.no
         totalSeconds: m.totalSeconds,
         speakerSeconds: m.speakerSeconds,
       });
+      out.push({ type: 'speakers/add', id: m.proposerId });
+      if (m.proposerSpeaks === 'last') out.push({ type: 'speakers/pinLast', id: m.proposerId });
       break;
     case 'unmod':
       out.push(pause, { type: 'debate/start', mode: 'unmod', totalSeconds: m.totalSeconds });
@@ -72,6 +74,7 @@ function RaiseForm() {
   const [total, setTotal] = useState(600);
   const [speaker, setSpeaker] = useState(60);
   const [tier, setTier] = useState<Tier>(1);
+  const [proposerSpeaks, setProposerSpeaks] = useState<'first' | 'last'>('first');
 
   const needs = motionNeeds(type);
   const present = state.delegates.filter((d) => d.attendance !== 'absent');
@@ -98,6 +101,7 @@ function RaiseForm() {
           ...(needs.topic ? { topic: topic.trim() } : {}),
           ...(needs.totalTime ? { totalSeconds: total } : {}),
           ...(needs.speakerTime ? { speakerSeconds: speaker } : {}),
+          ...(type === 'mod' ? { proposerSpeaks } : {}),
         },
         { type: 'interaction/add', delegateId: proposer, kind: 'motion_raised', tier, refId: motionId, now: Date.now() },
       ],
@@ -130,6 +134,25 @@ function RaiseForm() {
         )}
         {needs.totalTime && <TimeInput label="Total time" seconds={total} onChange={setTotal} />}
         {needs.speakerTime && <TimeInput label="Speaker time" seconds={speaker} onChange={setSpeaker} />}
+        {type === 'mod' && (
+          <div className="field motions-speaks">
+            <span className="motions-caption">Proposer speaks</span>
+            <div className="motions-seg" role="radiogroup" aria-label="Proposer speaks">
+              {(['first', 'last'] as const).map((v) => (
+                <button
+                  key={v}
+                  type="button"
+                  role="radio"
+                  aria-checked={proposerSpeaks === v}
+                  className="motions-opt"
+                  onClick={() => setProposerSpeaks(v)}
+                >
+                  {v === 'first' ? 'First' : 'Last'}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         <div className="field motions-quality">
           <span className="motions-caption">Quality</span>
           <PipRater
@@ -180,7 +203,10 @@ function OnTheFloor() {
               return (
                 <li key={m.id} className="list-row motions-item" aria-label={describeMotion(m)}>
                   <span className="motions-pos tabular">{position}</span>
-                  <span className="motions-desc">{describeMotion(m)}</span>
+                  <span className="motions-desc">
+                    {describeMotion(m)}
+                    {m.type === 'mod' && m.proposerSpeaks === 'last' ? ', proposer speaks last' : ''}
+                  </span>
                   <span className="motions-by">{proposer ? <DelegateChip delegate={proposer} /> : m.proposerId}</span>
                   <span className="motions-actions">
                     <Button variant={i === 0 ? 'primary' : 'ghost'} onClick={() => setVoting(m)}>Vote</Button>

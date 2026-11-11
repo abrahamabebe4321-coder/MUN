@@ -99,6 +99,9 @@ describe('LeaderboardPanel', () => {
     expect(items[0]).toHaveTextContent('Moderated caucus speech');
     expect(items[0]).toHaveTextContent('+6');
     expect(items[3]).toHaveTextContent('GSL speech');
+    const penalty = items.find((li) => li.textContent?.includes('Penalty'));
+    expect(penalty).toHaveTextContent('Minor');
+    expect(penalty).not.toHaveTextContent('Works');
     await user.click(screen.getByRole('button', { name: 'Delete GSL speech for Ethiopia' }));
     expect(cells(bodyRows()[0])[1]).toHaveTextContent('Kenya');
     expect(screen.getByTestId('probe').textContent).not.toContain('gsl_speech');

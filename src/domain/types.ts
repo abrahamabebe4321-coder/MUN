@@ -78,6 +78,8 @@ export interface Motion {
   totalSeconds: number;
   /** Individual speaker time in seconds (mod, gsl). 0 when not applicable. */
   speakerSeconds: number;
+  /** Moderated caucus only: whether the proposer speaks first (default) or last. */
+  proposerSpeaks?: 'first' | 'last';
   status: MotionStatus;
   /** Order in which the motion was raised (ascending). */
   raisedOrder: number;

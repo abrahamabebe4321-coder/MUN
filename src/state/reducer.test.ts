@@ -492,3 +492,93 @@ describe('unknown ids', () => {
     for (const a of actions) expect(reducer(s, a)).toBe(s);
   });
 });
+
+describe('proposer speaks last and POI queue', () => {
+  const base = () => {
+    let s = createCommittee();
+    for (const id of ['a', 'b', 'c', 'd']) s = reducer(s, { type: 'delegate/add', id, name: id.toUpperCase(), flag: null });
+    return reducer(s, { type: 'debate/start', mode: 'mod', topic: 'T' });
+  };
+  const list = (s: ReturnType<typeof base>) => s.debate.speakersList;
+
+  it('stores proposerSpeaks on motions', () => {
+    let s = base();
+    s = reducer(s, { type: 'motion/add', motionType: 'mod', proposerId: 'a', topic: 'x', proposerSpeaks: 'last' });
+    s = reducer(s, { type: 'motion/add', motionType: 'mod', proposerId: 'a', topic: 'x' });
+    expect(s.motions[0].proposerSpeaks).toBe('last');
+    expect(s.motions[1].proposerSpeaks).toBeUndefined();
+  });
+
+  it('pinLast inserts later speakers before the pinned one', () => {
+    let s = base();
+    s = reducer(s, { type: 'speakers/add', id: 'a' });
+    s = reducer(s, { type: 'speakers/pinLast', id: 'a' });
+    s = reducer(s, { type: 'speakers/add', id: 'b' });
+    s = reducer(s, { type: 'speakers/add', id: 'c' });
+    expect(list(s)).toEqual(['b', 'c', 'a']);
+    expect(s.debate.pinnedLastId).toBe('a');
+  });
+
+  it('pinLast ignores ids not in the list; null unpins; move keeps pin', () => {
+    let s = base();
+    expect(reducer(s, { type: 'speakers/pinLast', id: 'a' })).toBe(s);
+    s = reducer(s, { type: 'speakers/add', id: 'a' });
+    s = reducer(s, { type: 'speakers/add', id: 'b' });
+    s = reducer(s, { type: 'speakers/pinLast', id: 'b' });
+    s = reducer(s, { type: 'speakers/move', id: 'b', direction: -1 });
+    expect(s.debate.pinnedLastId).toBe('b');
+    s = reducer(s, { type: 'speakers/pinLast', id: null });
+    expect(s.debate.pinnedLastId).toBeNull();
+  });
+
+  it('clears the pin when the pinned delegate leaves the list', () => {
+    const pinned = () => {
+      let s = base();
+      s = reducer(s, { type: 'speakers/add', id: 'a' });
+      s = reducer(s, { type: 'speakers/pinLast', id: 'a' });
+      return s;
+    };
+    expect(reducer(pinned(), { type: 'speakers/remove', id: 'a' }).debate.pinnedLastId).toBeNull();
+    expect(reducer(pinned(), { type: 'speakers/next' }).debate.pinnedLastId).toBeNull();
+    expect(reducer(pinned(), { type: 'speakers/setCurrent', id: 'a' }).debate.pinnedLastId).toBeNull();
+    expect(reducer(pinned(), { type: 'delegate/remove', id: 'a' }).debate.pinnedLastId).toBeNull();
+    // someone else speaking keeps the pin
+    let s = reducer(pinned(), { type: 'speakers/add', id: 'b' });
+    s = reducer(s, { type: 'speakers/setCurrent', id: 'b' });
+    expect(s.debate.pinnedLastId).toBe('a');
+  });
+
+  it('debate/start resets pin and queue', () => {
+    let s = base();
+    s = reducer(s, { type: 'speakers/add', id: 'a' });
+    s = reducer(s, { type: 'speakers/pinLast', id: 'a' });
+    s = reducer(s, { type: 'debate/start', mode: 'gsl' });
+    expect(s.debate.pinnedLastId).toBeNull();
+    expect(s.debate.poiQueue).toEqual([]);
+  });
+
+  it('poi/queue appends known, new, non-speaker delegates in order', () => {
+    let s = base();
+    s = reducer(s, { type: 'speakers/setCurrent', id: 'a' });
+    s = reducer(s, { type: 'poi/queue', id: 'b' });
+    s = reducer(s, { type: 'poi/queue', id: 'c' });
+    s = reducer(s, { type: 'poi/queue', id: 'b' });
+    s = reducer(s, { type: 'poi/queue', id: 'a' });
+    s = reducer(s, { type: 'poi/queue', id: 'zz' });
+    expect(s.debate.poiQueue).toEqual(['b', 'c']);
+    s = reducer(s, { type: 'poi/unqueue', id: 'b' });
+    expect(s.debate.poiQueue).toEqual(['c']);
+    expect(reducer(s, { type: 'poi/unqueue', id: 'b' })).toBe(s);
+  });
+
+  it('poi queue resets on a new speech and drops removed delegates', () => {
+    let s = base();
+    s = reducer(s, { type: 'speakers/setCurrent', id: 'a' });
+    s = reducer(s, { type: 'poi/queue', id: 'b' });
+    s = reducer(s, { type: 'poi/queue', id: 'c' });
+    s = reducer(s, { type: 'delegate/remove', id: 'b' });
+    expect(s.debate.poiQueue).toEqual(['c']);
+    expect(reducer(s, { type: 'speakers/next' }).debate.poiQueue).toEqual([]);
+    expect(reducer(s, { type: 'speakers/setCurrent', id: 'd' }).debate.poiQueue).toEqual([]);
+  });
+});

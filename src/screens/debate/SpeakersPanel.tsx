@@ -40,6 +40,7 @@ export function SpeakersPanel() {
               <span className="speakers-pos">{i + 1}</span>
               <span className="speakers-name">
                 <DelegateChip delegate={d} />
+                {debate.pinnedLastId === d.id && <span className="speakers-pinned muted">speaks last</span>}
               </span>
               <span className="speakers-actions">
                 <Button

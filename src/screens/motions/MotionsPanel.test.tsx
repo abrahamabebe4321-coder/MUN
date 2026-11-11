@@ -244,10 +244,54 @@ describe('helpers', () => {
       { type: 'motion/setStatus', id: 'm1', status: 'passed' },
       { type: 'timer', which: 'both', op: 'pause', now: 5 },
       { type: 'debate/start', mode: 'mod', topic: 'T', totalSeconds: 600, speakerSeconds: 60 },
+      { type: 'speakers/add', id: 'et' },
+      { type: 'motion/clearPending' },
+    ]);
+    expect(outcomeActions({ ...m, proposerSpeaks: 'first' }, true, 5)).toEqual(outcomeActions(m, true, 5));
+    expect(outcomeActions({ ...m, proposerSpeaks: 'last' }, true, 5)).toEqual([
+      { type: 'motion/setStatus', id: 'm1', status: 'passed' },
+      { type: 'timer', which: 'both', op: 'pause', now: 5 },
+      { type: 'debate/start', mode: 'mod', topic: 'T', totalSeconds: 600, speakerSeconds: 60 },
+      { type: 'speakers/add', id: 'et' },
+      { type: 'speakers/pinLast', id: 'et' },
       { type: 'motion/clearPending' },
     ]);
     expect(outcomeActions({ ...m, type: 'roll_call' }, true, 5)).toHaveLength(2);
     expect(outcomeActions({ ...m, type: 'extend', totalSeconds: 120 }, true, 5)[1]).toEqual({ type: 'timer', which: 'caucus', op: 'add', seconds: 120, now: 5 });
     void createTimer;
+  });
+});
+
+describe('proposer speaks', () => {
+  it('defaults to first and shows the radiogroup only for moderated caucus', async () => {
+    const { user } = setup();
+    const group = screen.getByRole('radiogroup', { name: 'Proposer speaks' });
+    expect(within(group).getByRole('radio', { name: 'First' })).toHaveAttribute('aria-checked', 'true');
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Motion type' }), 'unmod');
+    expect(screen.queryByRole('radiogroup', { name: 'Proposer speaks' })).toBeNull();
+  });
+  it('stores Last, notes it on the floor, and queues the proposer last when passed', async () => {
+    const { user } = setup();
+    await pick(user, 'Kenya');
+    await user.type(screen.getByRole('textbox', { name: 'Topic' }), 'Water');
+    await user.click(within(screen.getByRole('radiogroup', { name: 'Proposer speaks' })).getByRole('radio', { name: 'Last' }));
+    await user.click(submit());
+    expect(latest.state.motions[0].proposerSpeaks).toBe('last');
+    // stays selected after adding
+    expect(within(screen.getByRole('radiogroup', { name: 'Proposer speaks' })).getByRole('radio', { name: 'Last' })).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByText(/, proposer speaks last/)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Pass without vote' }));
+    expect(latest.state.debate.speakersList).toEqual(['ke']);
+    expect(latest.state.debate.pinnedLastId).toBe('ke');
+  });
+  it('first (default) queues the proposer without pinning', async () => {
+    const { user } = setup();
+    await pick(user, 'Kenya');
+    await user.type(screen.getByRole('textbox', { name: 'Topic' }), 'Water');
+    await user.click(submit());
+    await user.click(screen.getByRole('button', { name: 'Pass without vote' }));
+    expect(latest.state.debate.speakersList).toEqual(['ke']);
+    expect(latest.state.debate.pinnedLastId).toBeNull();
+    expect(screen.queryByText(/proposer speaks last/)).toBeNull();
   });
 });

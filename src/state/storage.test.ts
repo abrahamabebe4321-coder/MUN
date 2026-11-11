@@ -20,6 +20,15 @@ describe('storage', () => {
     expect(loadState(st)).toEqual(s);
   });
 
+  it('loads older saves that lack pinnedLastId and poiQueue', () => {
+    const old = JSON.parse(JSON.stringify(createCommittee())) as { debate: Record<string, unknown> };
+    delete old.debate.pinnedLastId;
+    delete old.debate.poiQueue;
+    const s = parseState(old);
+    expect(s?.debate.pinnedLastId).toBeNull();
+    expect(s?.debate.poiQueue).toEqual([]);
+  });
+
   it('returns null for missing or bad data', () => {
     const st = fakeStorage();
     expect(loadState(st)).toBeNull();

@@ -49,6 +49,7 @@ export type Action =
       topic?: string;
       totalSeconds?: number;
       speakerSeconds?: number;
+      proposerSpeaks?: 'first' | 'last';
     }
   | { type: 'motion/setStatus'; id: string; status: MotionStatus }
   | { type: 'motion/remove'; id: string }
@@ -74,6 +75,9 @@ export type Action =
   | { type: 'debate/end' }
   | { type: 'speakers/add'; id: string }
   | { type: 'speakers/remove'; id: string }
+  | { type: 'speakers/pinLast'; id: string | null }
+  | { type: 'poi/queue'; id: string }
+  | { type: 'poi/unqueue'; id: string }
   | { type: 'speakers/move'; id: string; direction: -1 | 1 }
   | { type: 'speakers/next' }
   | { type: 'speakers/setCurrent'; id: string | null }
@@ -139,6 +143,8 @@ function advanceSpeaker(debate: DebateState, nextId: string | null): DebateState
     spoken,
     currentSpeakerId: nextId,
     speakersList: debate.speakersList.filter((x) => x !== nextId),
+    pinnedLastId: debate.pinnedLastId === nextId ? null : debate.pinnedLastId,
+    poiQueue: [],
     speechTimer: createTimer(debate.speakerSeconds),
   };
 }
@@ -208,6 +214,8 @@ export function reducer(state: CommitteeState, action: Action): CommitteeState {
         debate: {
           ...d,
           speakersList: d.speakersList.filter((x) => x !== id),
+          pinnedLastId: d.pinnedLastId === id ? null : d.pinnedLastId,
+          poiQueue: d.poiQueue.filter((x) => x !== id),
           spoken: d.spoken.filter((x) => x !== id),
           currentSpeakerId: d.currentSpeakerId === id ? null : d.currentSpeakerId,
           speechRef: d.currentSpeakerId === id ? null : d.speechRef,
@@ -285,6 +293,7 @@ export function reducer(state: CommitteeState, action: Action): CommitteeState {
             topic: action.topic ?? '',
             totalSeconds: action.totalSeconds ?? 0,
             speakerSeconds: action.speakerSeconds ?? 0,
+            ...(action.proposerSpeaks !== undefined ? { proposerSpeaks: action.proposerSpeaks } : {}),
             status: 'pending',
             raisedOrder: state.nextId,
             session: state.session,
@@ -365,6 +374,8 @@ export function reducer(state: CommitteeState, action: Action): CommitteeState {
           spoken: [],
           resolutionId: action.resolutionId ?? null,
           speechRef: null,
+          pinnedLastId: null,
+          poiQueue: [],
         },
       };
     }
@@ -381,7 +392,11 @@ export function reducer(state: CommitteeState, action: Action): CommitteeState {
       ) {
         return state;
       }
-      return { ...state, debate: { ...d, speakersList: [...d.speakersList, action.id] } };
+      const pinAt = d.pinnedLastId === null ? -1 : d.speakersList.indexOf(d.pinnedLastId);
+      const list = [...d.speakersList];
+      if (pinAt >= 0) list.splice(pinAt, 0, action.id);
+      else list.push(action.id);
+      return { ...state, debate: { ...d, speakersList: list } };
     }
 
     case 'speakers/remove': {
@@ -389,8 +404,37 @@ export function reducer(state: CommitteeState, action: Action): CommitteeState {
       if (!d.speakersList.includes(action.id)) return state;
       return {
         ...state,
-        debate: { ...d, speakersList: d.speakersList.filter((x) => x !== action.id) },
+        debate: {
+          ...d,
+          speakersList: d.speakersList.filter((x) => x !== action.id),
+          pinnedLastId: d.pinnedLastId === action.id ? null : d.pinnedLastId,
+        },
       };
+    }
+
+    case 'speakers/pinLast': {
+      const d = state.debate;
+      if (action.id !== null && !d.speakersList.includes(action.id)) return state;
+      if (d.pinnedLastId === action.id) return state;
+      return { ...state, debate: { ...d, pinnedLastId: action.id } };
+    }
+
+    case 'poi/queue': {
+      const d = state.debate;
+      if (
+        !hasDelegate(state, action.id) ||
+        d.poiQueue.includes(action.id) ||
+        d.currentSpeakerId === action.id
+      ) {
+        return state;
+      }
+      return { ...state, debate: { ...d, poiQueue: [...d.poiQueue, action.id] } };
+    }
+
+    case 'poi/unqueue': {
+      const d = state.debate;
+      if (!d.poiQueue.includes(action.id)) return state;
+      return { ...state, debate: { ...d, poiQueue: d.poiQueue.filter((x) => x !== action.id) } };
     }
 
     case 'speakers/move': {

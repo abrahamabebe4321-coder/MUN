@@ -29,7 +29,7 @@
   top: 0.75rem;
   right: 0.75rem;
   z-index: 2;
-  opacity: 0.2;
+  opacity: 0.75;
   transition: opacity 0.2s;
   background: var(--bg);
   color: var(--text);
@@ -39,6 +39,11 @@
   font-size: 1rem;
   cursor: pointer;
 }
+.proj-pois { display: flex; flex-wrap: nowrap; align-items: center; gap: 0.4em 1.2em; min-width: 0; overflow: hidden; font-size: clamp(0.85rem, 2.4vh, 1.5rem); }
+.proj-pois-title { flex: none; color: var(--accent-strong); font-weight: 600; }
+.proj-poi { display: inline-flex; align-items: center; gap: 0.4em; min-width: 0; white-space: nowrap; }
+.proj-poi .flag { font-size: 1em !important; }
+.proj-pois .proj-more { margin: 0; flex: none; }
 .proj-fullscreen:hover,
 .proj-fullscreen:focus-visible { opacity: 1; }
 .proj-waiting {

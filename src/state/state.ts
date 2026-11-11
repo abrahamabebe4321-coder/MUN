@@ -28,6 +28,10 @@ export interface DebateState {
   resolutionId: string | null;
   /** Unique reference for the current speech; interactions logged during it carry this as refId. Null when nobody has the floor. */
   speechRef: string | null;
+  /** Delegate who has been told they speak last; new speakers are inserted before them. */
+  pinnedLastId: string | null;
+  /** Delegates waiting to ask a POI of the current speaker, in order (unrated). */
+  poiQueue: string[];
 }
 
 export type Stage = 'setup' | 'running' | 'ended';
@@ -62,6 +66,8 @@ export function idleDebate(speakerSeconds: number = DEFAULT_SPEAKER_SECONDS): De
     spoken: [],
     resolutionId: null,
     speechRef: null,
+    pinnedLastId: null,
+    poiQueue: [],
   };
 }
 

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { InteractionKind } from '../../domain/types'
-import { KIND_LABELS, scoreInteraction } from '../../domain/scoring'
+import { KIND_LABELS, PENALTY_LABELS, scoreInteraction } from '../../domain/scoring'
 import { useCommittee } from '../../state/CommitteeContext'
 import { Button } from '../../components/ui/Button'
 import { DelegateSelect } from '../../components/ui/DelegateSelect'
@@ -62,9 +62,9 @@ export function QuickLogModal({
           </div>
         ) : (
           <>
-            {kind === 'penalty' && <p className="muted">Minor / Serious / Severe</p>}
             <TierButtons
               disabled={!selected}
+              {...(kind === 'penalty' ? { labels: PENALTY_LABELS } : {})}
               points={(tier) => scoreInteraction({ kind, tier, passed: false }, state.scoring)}
               onPick={log}
             />

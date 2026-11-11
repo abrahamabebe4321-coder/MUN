@@ -30,6 +30,7 @@
 .speech-poi-asker { flex: 0 0 9em; min-width: 0; }
 .speech-poi-rating { display: inline-flex; align-items: center; gap: var(--s2); }
 .speech-poi .btn { margin-left: auto; }
+.speech-poi-waiting { font-size: 13px; }
 .speech-add { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s3) var(--s5); }
 .speech-add-select { flex: 0 1 300px; min-width: 220px; }
 .speech kbd { font: inherit; font-size: 0.75em; padding: 0 var(--s1); border: 1px solid currentColor; border-radius: 4px; }

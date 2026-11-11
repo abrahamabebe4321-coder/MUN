@@ -4,7 +4,7 @@ import { derivedInteractions, ranking } from '../state/selectors';
 import {
   CATEGORY_LABELS,
   KIND_LABELS,
-  TIER_LABELS,
+  tierLabel,
   scoreInteraction,
   type Category,
 } from '../domain/scoring';
@@ -111,7 +111,7 @@ export function LeaderboardPanel() {
                 <li key={i.id}>
                   <DelegateChip delegate={d ?? { name, flag: null }} />
                   <span>{KIND_LABELS[i.kind]}</span>
-                  {flat ? null : <span className="lb-tier muted">{TIER_LABELS[i.tier]}</span>}
+                  {flat ? null : <span className="lb-tier muted">{tierLabel(i.kind, i.tier)}</span>}
                   <span className={`lb-pts tabular${pts < 0 ? ' lb-neg' : ''}`}>{signed(pts)}</span>
                   <Button
                     variant="ghost"
@@ -226,7 +226,7 @@ export function DelegateLogModal({
                         >
                           {TIERS.map((t) => (
                             <option key={t} value={t}>
-                              {TIER_LABELS[t]}
+                              {tierLabel(i.kind, t)}
                             </option>
                           ))}
                         </select>

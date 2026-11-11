@@ -9,17 +9,19 @@ export function TierButtons({
   disabled,
   compact,
   selected,
+  labels = TIER_LABELS,
 }: {
   onPick: (tier: Tier) => void
   points?: (tier: Tier) => number
   disabled?: boolean
   compact?: boolean
   selected?: Tier | null
+  labels?: Record<Tier, string>
 }) {
   return (
     <div className={`tier-buttons${compact ? ' tier-buttons-compact' : ''}`}>
       {TIERS.map((tier) => {
-        const label = TIER_LABELS[tier]
+        const label = labels[tier]
         const pts = points?.(tier)
         const aria = pts === undefined ? label : `${label} (${pts} points)`
         const ptsText = pts === undefined ? null : pts > 0 ? `+${pts}` : `${pts}`

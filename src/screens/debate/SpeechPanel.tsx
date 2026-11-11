@@ -43,7 +43,6 @@ export function SpeechPanel() {
   const { speechTimer, caucusTimer } = debate
   const now = useNow(isRunning(speechTimer) || (caucusTimer !== null && isRunning(caucusTimer)))
   const [sound, setSound] = useState(true)
-  const [asker, setAsker] = useState<string | null>(null)
   const audioRef = useRef<AudioContext | null>(null)
 
   const speakerId = debate.currentSpeakerId
@@ -139,6 +138,7 @@ export function SpeechPanel() {
 
   const present = state.delegates.filter((d) => d.attendance !== 'absent')
   const pois = state.interactions.filter((i) => i.kind === 'poi_asked' && i.refId === debate.speechRef)
+  const queued = debate.poiQueue.map((id) => delegateById(state, id)).filter((d) => d !== null && d !== undefined)
   const showPoi = debate.mode !== 'opening' && speakerId !== null
 
   const rateLinked = (kind: 'poi_answer' | 'follow_up', poiId: string, delegateId: string, tier: Tier) => {
@@ -258,10 +258,50 @@ export function SpeechPanel() {
       {showPoi && (
         <div className="speech-pois">
           <h3>Points of information</h3>
-          {pois.length === 0 ? (
+          {pois.length === 0 && queued.length === 0 ? (
             <p className="muted">No POIs logged for this speech yet.</p>
           ) : (
             <ul className="speech-poi-list">
+              {queued.map((d) => (
+                <li key={`q-${d.id}`} className="speech-poi speech-poi-queued" aria-label={`Queued POI from ${d.name}`}>
+                  <span className="speech-poi-asker">
+                    <DelegateChip delegate={d} />
+                  </span>
+                  <span className="speech-poi-waiting muted">Waiting</span>
+                  <span className="speech-poi-rating">
+                    <PipRater
+                      label={`Rate question from ${d.name}`}
+                      size="sm"
+                      value={null}
+                      points={ratePoints('poi_asked')}
+                      onPick={(tier) =>
+                        dispatch({
+                          type: 'batch',
+                          actions: [
+                            { type: 'poi/unqueue', id: d.id },
+                            {
+                              type: 'interaction/add',
+                              delegateId: d.id,
+                              kind: 'poi_asked',
+                              tier,
+                              refId: debate.speechRef ?? undefined,
+                              now: Date.now(),
+                            },
+                          ],
+                        })
+                      }
+                    />
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    aria-label={`Remove ${d.name} from POI queue`}
+                    onClick={() => dispatch({ type: 'poi/unqueue', id: d.id })}
+                  >
+                    ✕
+                  </Button>
+                </li>
+              ))}
               {pois.map((poi) => {
                 const askerName = delegateById(state, poi.delegateId)
                 const name = askerName?.name ?? poi.delegateId
@@ -324,33 +364,13 @@ export function SpeechPanel() {
                 label="POI from"
                 placeholder="Add a POI: who is asking?"
                 delegates={present}
-                excludeIds={speakerId ? [speakerId] : []}
-                value={asker}
-                onChange={setAsker}
+                excludeIds={[...(speakerId ? [speakerId] : []), ...debate.poiQueue]}
+                value={null}
+                onChange={(id) => {
+                  if (id) dispatch({ type: 'poi/queue', id })
+                }}
               />
             </div>
-            {asker && (
-              <span className="speech-poi-rating">
-                <span className="speech-caption">Rate the question</span>
-                <PipRater
-                  label="Rate the question"
-                  size="md"
-                  value={null}
-                  points={ratePoints('poi_asked')}
-                  onPick={(tier) => {
-                    dispatch({
-                      type: 'interaction/add',
-                      delegateId: asker,
-                      kind: 'poi_asked',
-                      tier,
-                      refId: debate.speechRef ?? undefined,
-                      now: Date.now(),
-                    })
-                    setAsker(null)
-                  }}
-                />
-              </span>
-            )}
           </div>
         </div>
       )}
