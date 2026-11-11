@@ -16,11 +16,11 @@ export function Placeholder({ name }: { name: string }) {
   );
 }
 
-export const TABS: { id: TabId; label: string; render: () => ReactNode }[] = [
-  { id: 'debate', label: 'Debate', render: () => <DebatePanel /> },
-  { id: 'motions', label: 'Motions & voting', render: () => <MotionsPanel /> },
-  { id: 'resolutions', label: 'Resolutions', render: () => <ResolutionsPanel /> },
-  { id: 'leaderboard', label: 'Leaderboard', render: () => <LeaderboardPanel /> },
-  { id: 'rollcall', label: 'Roll call', render: () => <RollCallPanel /> },
-  { id: 'settings', label: 'Settings', render: () => <SettingsPanel /> },
+export const TABS: { id: TabId; label: string; inBar: boolean; render: () => ReactNode }[] = [
+  { id: 'debate', label: 'Debate', inBar: true, render: () => <DebatePanel /> },
+  { id: 'motions', label: 'Motions', inBar: true, render: () => <MotionsPanel /> },
+  { id: 'resolutions', label: 'Resolutions', inBar: true, render: () => <ResolutionsPanel /> },
+  { id: 'leaderboard', label: 'Scores', inBar: true, render: () => <LeaderboardPanel /> },
+  { id: 'rollcall', label: 'Roll call', inBar: false, render: () => <RollCallPanel /> },
+  { id: 'settings', label: 'Settings', inBar: false, render: () => <SettingsPanel /> },
 ];

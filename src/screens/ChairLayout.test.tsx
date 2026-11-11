@@ -35,6 +35,14 @@ function setup(s = running()) {
 
 const tab = (name: string) => screen.getByRole('tab', { name });
 const topbar = () => within(document.querySelector('.chair-topbar') as HTMLElement);
+const attendance = (present: number, total: number) =>
+  screen.getByRole('button', { name: new RegExp(`^Attendance: ${present} of ${total} present`) });
+const noTabSelected = () =>
+  screen.getAllByRole('tab').forEach((t) => expect(t).toHaveAttribute('aria-selected', 'false'));
+async function more(user: ReturnType<typeof userEvent.setup>, item: string | RegExp) {
+  await user.click(screen.getByRole('button', { name: 'More' }));
+  await user.click(screen.getByRole('menuitem', { name: item }));
+}
 
 beforeEach(() => localStorage.clear());
 
@@ -44,39 +52,61 @@ describe('ChairLayout', () => {
     expect(topbar().getByText('GA1')).toBeInTheDocument();
     expect(topbar().getByText('Veto reform')).toBeInTheDocument();
     expect(topbar().getByText('Session 1')).toBeInTheDocument();
-    expect(topbar().getByText(/0\/3 present/)).toHaveTextContent('No quorum');
+    expect(attendance(0, 3)).toHaveTextContent('0 of 3 present (no quorum)');
   });
 
-  it('starts on Roll call when nobody is present, Debate otherwise', () => {
+  it('starts on the Roll call page (no tab selected) when nobody is present', () => {
     setup();
-    expect(tab('Roll call')).toHaveAttribute('aria-selected', 'true');
+    noTabSelected();
+    expect(screen.getByRole('region', { name: 'Roll call' })).toBeInTheDocument();
+    expect(screen.getByRole('tabpanel', { name: 'Roll call' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Back to debate' })).toBeInTheDocument();
   });
 
   it('starts on Debate when someone is present', () => {
     setup(running(true));
     expect(tab('Debate')).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('region', { name: 'Debate' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Back to debate' })).not.toBeInTheDocument();
+    expect(attendance(1, 3)).toHaveTextContent(/^1 of 3 present$/);
   });
 
-  it('switches tabs', async () => {
+  it('shows four tabs and switches between them', async () => {
     const user = setup();
-    await user.click(tab('Leaderboard'));
-    expect(tab('Leaderboard')).toHaveAttribute('aria-selected', 'true');
-    expect(tab('Roll call')).toHaveAttribute('aria-selected', 'false');
-    expect(screen.getByRole('region', { name: 'Leaderboard' })).toBeInTheDocument();
     expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual([
       'Debate',
-      'Motions & voting',
+      'Motions',
       'Resolutions',
-      'Leaderboard',
-      'Roll call',
-      'Settings',
+      'Scores',
     ]);
+    await user.click(tab('Scores'));
+    expect(tab('Scores')).toHaveAttribute('aria-selected', 'true');
+    expect(tab('Debate')).toHaveAttribute('aria-selected', 'false');
+    expect(screen.getByRole('region', { name: 'Leaderboard' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Back to debate' })).not.toBeInTheDocument();
+  });
+
+  it('attendance button, More menu and Back to debate navigate between pages', async () => {
+    const user = setup(running(true));
+    await user.click(attendance(1, 3));
+    expect(screen.getByRole('region', { name: 'Roll call' })).toBeInTheDocument();
+    noTabSelected();
+    await user.click(screen.getByRole('button', { name: 'Back to debate' }));
+    expect(tab('Debate')).toHaveAttribute('aria-selected', 'true');
+
+    await more(user, 'Settings');
+    expect(screen.getByRole('region', { name: 'Settings' })).toBeInTheDocument();
+    noTabSelected();
+    await user.click(screen.getByRole('button', { name: 'Back to debate' }));
+    expect(screen.getByRole('region', { name: 'Debate' })).toBeInTheDocument();
+
+    await more(user, 'Roll call');
+    expect(screen.getByRole('region', { name: 'Roll call' })).toBeInTheDocument();
   });
 
   it('panels can switch tab through useNav (passing a caucus motion opens Debate)', async () => {
     const user = setup(running(true));
-    await user.click(tab('Motions & voting'));
+    await user.click(tab('Motions'));
     await user.click(screen.getByRole('combobox', { name: 'Proposed by' }));
     await user.click(screen.getByRole('option', { name: /Ethiopia/ }));
     await user.type(screen.getByLabelText('Topic'), 'Water');
@@ -85,39 +115,43 @@ describe('ChairLayout', () => {
     expect(tab('Debate')).toHaveAttribute('aria-selected', 'true');
   });
 
-  it('undo/redo via buttons after an attendance change', async () => {
+  it('undo/redo after an attendance change', async () => {
     const user = setup();
     const undoBtn = screen.getByRole('button', { name: 'Undo' });
     expect(undoBtn).toBeDisabled();
     await user.click(screen.getByRole('button', { name: 'All present' }));
-    expect(topbar().getByText(/3\/3 present/)).toBeInTheDocument();
+    expect(attendance(3, 3)).toBeInTheDocument();
     expect(undoBtn).toBeEnabled();
     await user.click(undoBtn);
-    expect(topbar().getByText(/0\/3 present/)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Redo' })).toBeEnabled();
+    expect(attendance(0, 3)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'More' }));
+    expect(screen.getByRole('menuitem', { name: /^Redo/ })).toBeEnabled();
+    await user.click(screen.getByRole('menuitem', { name: /^Redo/ }));
+    expect(attendance(3, 3)).toBeInTheDocument();
   });
 
-  it('Ctrl+Z triggers undo', async () => {
+  it('Ctrl+Z triggers undo and Ctrl+Shift+Z redo', async () => {
     const user = setup();
     await user.click(screen.getByRole('button', { name: 'All present' }));
     fireEvent.keyDown(document.body, { key: 'z', ctrlKey: true });
-    expect(topbar().getByText(/0\/3 present/)).toBeInTheDocument();
+    expect(attendance(0, 3)).toBeInTheDocument();
     fireEvent.keyDown(document.body, { key: 'z', ctrlKey: true, shiftKey: true });
-    expect(topbar().getByText(/3\/3 present/)).toBeInTheDocument();
+    expect(attendance(3, 3)).toBeInTheDocument();
   });
 
   it('next session flow', async () => {
     const user = setup(running(true));
-    await user.click(screen.getByRole('button', { name: 'Next session' }));
+    await more(user, 'Next session');
     expect(screen.getByText(/Start session 2\?/)).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Start session 2' }));
     expect(topbar().getByText('Session 2')).toBeInTheDocument();
-    expect(tab('Roll call')).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('region', { name: 'Roll call' })).toBeInTheDocument();
+    noTabSelected();
   });
 
   it('end conference flow and reopen', async () => {
     const user = setup();
-    await user.click(screen.getByRole('button', { name: 'End conference' }));
+    await more(user, 'End conference');
     const dialog = screen.getByRole('dialog');
     await user.click(within(dialog).getByRole('button', { name: 'End conference' }));
     expect(screen.getByRole('heading', { name: 'Conference summary' })).toBeInTheDocument();

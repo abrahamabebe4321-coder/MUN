@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Button } from '../components/ui/Button';
+import { Menu } from '../components/ui/Menu';
 import { Modal } from '../components/ui/Modal';
 import { quorum } from '../domain/voting';
 import { useCommittee } from '../state/CommitteeContext';
@@ -44,59 +45,83 @@ export function ChairLayout() {
   const next = state.session + 1;
   const active = TABS.find((t) => t.id === tab) ?? TABS[0];
 
+  const selectedTab = active.inBar ? active : null;
+  const noQuorum = !q.hasQuorum;
+
   return (
     <>
-      <header className="chair-topbar">
-        <div className="chair-title">
-          <span className="chair-name">{state.name}</span>
-          <span className="chair-topic" title={state.topic}>{state.topic}</span>
-        </div>
-        <div className="chair-badges">
-          <span className="badge">{`Session ${state.session}`}</span>
-          <span className={`badge${q.hasQuorum ? '' : ' chair-badge-warn'}`}>
-            {`${q.present}/${q.total} present`}
-            {q.hasQuorum ? '' : ' · No quorum'}
-          </span>
-        </div>
-        <div className="chair-actions">
-          <Button size="sm" disabled={!canUndo} title="Undo (Ctrl+Z)" onClick={undo}>Undo</Button>
-          <Button size="sm" disabled={!canRedo} title="Redo (Ctrl+Shift+Z)" onClick={redo}>Redo</Button>
-          <Button
-            size="sm"
-            onClick={() =>
-              window.open(`${window.location.pathname}#/projector`, 'mun-projector', 'popup,width=1280,height=720')
-            }
-          >
-            Projector
-          </Button>
-          <Button size="sm" onClick={() => setConfirm('next')}>Next session</Button>
-          <Button size="sm" variant="danger" onClick={() => setConfirm('end')}>End conference</Button>
-        </div>
-      </header>
+      <div className="chair-header">
+        <header className="chair-topbar">
+          <div className="chair-title">
+            <span className="chair-name">{state.name}</span>
+            <span className="chair-topic" title={state.topic}>{state.topic}</span>
+          </div>
+          <div className="chair-actions">
+            <span className="chair-session">{`Session ${state.session}`}</span>
+            <Button
+              variant="ghost"
+              size="sm"
+              className={`chair-attendance${noQuorum ? ' chair-warn' : ''}`}
+              aria-label={`Attendance: ${q.present} of ${q.total} present. Open roll call`}
+              onClick={() => setTab('rollcall')}
+            >
+              {`${q.present} of ${q.total} present${noQuorum ? ' (no quorum)' : ''}`}
+            </Button>
+            <Button size="sm" disabled={!canUndo} title="Undo (Ctrl+Z)" onClick={undo}>Undo</Button>
+            <Button
+              size="sm"
+              onClick={() =>
+                window.open(`${window.location.pathname}#/projector`, 'mun-projector', 'popup,width=1280,height=720')
+              }
+            >
+              Projector
+            </Button>
+            <Menu
+              label="More"
+              align="right"
+              variant="secondary"
+              size="sm"
+              items={[
+                { label: 'Redo', onSelect: redo, disabled: !canRedo, hint: 'Ctrl+Shift+Z' },
+                { label: 'Roll call', onSelect: () => setTab('rollcall') },
+                { label: 'Settings', onSelect: () => setTab('settings') },
+                { label: 'Next session', onSelect: () => setConfirm('next') },
+                { label: 'End conference', onSelect: () => setConfirm('end'), danger: true },
+              ]}
+            />
+          </div>
+        </header>
 
-      <div className="chair-tabs" role="tablist" aria-label="Sections">
-        {TABS.map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            role="tab"
-            id={`chair-tab-${t.id}`}
-            aria-selected={t.id === tab}
-            aria-controls="chair-panel"
-            className="chair-tab"
-            onClick={() => setTab(t.id)}
-          >
-            {t.label}
-          </button>
-        ))}
+        <div className="chair-tabs" role="tablist" aria-label="Sections">
+          {TABS.filter((t) => t.inBar).map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              role="tab"
+              id={`chair-tab-${t.id}`}
+              aria-selected={t.id === tab}
+              aria-controls="chair-panel"
+              className="chair-tab"
+              onClick={() => setTab(t.id)}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div
         className="chair-panel"
         role="tabpanel"
         id="chair-panel"
-        aria-labelledby={`chair-tab-${active.id}`}
+        aria-labelledby={selectedTab ? `chair-tab-${selectedTab.id}` : undefined}
+        aria-label={selectedTab ? undefined : active.label}
       >
+        {selectedTab ? null : (
+          <Button variant="ghost" size="sm" className="chair-back" onClick={() => setTab('debate')}>
+            Back to debate
+          </Button>
+        )}
         <NavContext.Provider value={navigate}>{active.render()}</NavContext.Provider>
       </div>
 
