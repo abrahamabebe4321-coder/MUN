@@ -150,7 +150,7 @@ export function SpeechPanel() {
 
   return (
     <section className="speech" aria-label="Current speech">
-      <div className="card speech-card">
+      <div className="card speech-card speech-timers">
         <TimerDisplay timer={speechTimer} now={now} label="Speech" size="md" />
         <div className="speech-controls">
           <Button variant="primary" onClick={toggle}>
@@ -201,7 +201,7 @@ export function SpeechPanel() {
         )}
       </div>
 
-      <div className="card speech-card">
+      <div className="card speech-card speech-floor-card">
         {speaker ? (
           <div className="speech-floor">
             <DelegateChip delegate={speaker} size={40} />
@@ -243,7 +243,7 @@ export function SpeechPanel() {
       </div>
 
       {showPoi && (
-        <div className="card speech-card">
+        <div className="card speech-card speech-pois">
           <h3>Points of information</h3>
           <div className="speech-add">
             <DelegateSelect

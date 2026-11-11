@@ -1,4 +1,4 @@
-.speech { display: flex; flex-direction: column; gap: var(--s4); }
+.speech { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s4); align-items: start; }
 .speech-card { display: flex; flex-direction: column; gap: var(--s3); }
 .speech-controls { display: flex; flex-wrap: wrap; gap: var(--s2); align-items: center; }
 .speech-sound { display: inline-flex; gap: var(--s2); align-items: center; font-size: 0.9rem; }
@@ -11,3 +11,19 @@
 .speech-poi { display: flex; flex-wrap: wrap; gap: var(--s3); align-items: flex-end; padding: var(--s3); border: 1px solid var(--border, currentColor); border-radius: 8px; }
 .speech-poi-group { display: flex; flex-direction: column; gap: var(--s1); min-width: 120px; }
 .speech kbd { font: inherit; font-size: 0.75em; padding: 0 var(--s1); margin-left: var(--s2); border: 1px solid currentColor; border-radius: 4px; }
+
+.speech-card { min-width: 0; }
+.speech-timers .timer-time { font-size: clamp(3rem, 6vw, 4.5rem); font-variant-numeric: tabular-nums; }
+.speech-timers .time-input { flex-direction: row; flex-wrap: wrap; align-items: center; gap: var(--s2); }
+.speech-timers .time-input label { margin-right: var(--s1); }
+.speech-timers .speech-caucus { gap: var(--s2); }
+.speech-timers .speech-caucus .timer { display: flex; align-items: baseline; gap: var(--s2); }
+.speech-timers .speech-caucus .timer-bar { display: none; }
+@media (min-width: 1000px) {
+  .speech { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .speech-pois { grid-column: 1 / -1; }
+  .speech-add { display: grid; grid-template-columns: 260px minmax(0, 1fr); column-gap: var(--s3); row-gap: var(--s1); align-items: end; }
+  .speech-add > .combo { grid-column: 1; grid-row: 2; }
+  .speech-add > .speech-label { grid-column: 2; grid-row: 1; }
+  .speech-add > .tier-buttons { grid-column: 2; grid-row: 2; }
+}
