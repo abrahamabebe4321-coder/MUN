@@ -74,6 +74,17 @@ describe('ChairLayout', () => {
     ]);
   });
 
+  it('panels can switch tab through useNav (passing a caucus motion opens Debate)', async () => {
+    const user = setup(running(true));
+    await user.click(tab('Motions & voting'));
+    await user.click(screen.getByRole('combobox', { name: 'Proposed by' }));
+    await user.click(screen.getByRole('option', { name: /Ethiopia/ }));
+    await user.type(screen.getByLabelText('Topic'), 'Water');
+    await user.click(screen.getByRole('button', { name: 'Add to the floor' }));
+    await user.click(screen.getByRole('button', { name: 'Pass without vote' }));
+    expect(tab('Debate')).toHaveAttribute('aria-selected', 'true');
+  });
+
   it('undo/redo via buttons after an attendance change', async () => {
     const user = setup();
     const undoBtn = screen.getByRole('button', { name: 'Undo' });

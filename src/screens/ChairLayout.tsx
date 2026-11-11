@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
 import { quorum } from '../domain/voting';
 import { useCommittee } from '../state/CommitteeContext';
+import { NavContext } from './nav';
 import { TABS } from './tabs';
 import type { TabId } from './tabs';
 import './chair.css';
@@ -35,6 +36,10 @@ export function ChairLayout() {
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
   }, [undo, redo]);
+
+  const navigate = useCallback((t: string) => {
+    if (TABS.some((x) => x.id === t)) setTab(t as TabId);
+  }, []);
 
   const next = state.session + 1;
   const active = TABS.find((t) => t.id === tab) ?? TABS[0];
@@ -92,7 +97,7 @@ export function ChairLayout() {
         id="chair-panel"
         aria-labelledby={`chair-tab-${active.id}`}
       >
-        {active.render()}
+        <NavContext.Provider value={navigate}>{active.render()}</NavContext.Provider>
       </div>
 
       {confirm === 'next' && (
