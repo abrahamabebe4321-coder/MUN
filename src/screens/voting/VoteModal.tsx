@@ -71,9 +71,9 @@ function Counter({
 }) {
   return (
     <div className="vote-counter">
-      <span>{label}</span>
+      <span className="vote-option-label">{label}</span>
       <div className="vote-counter-controls">
-        <Button size="sm" aria-label={`Decrease ${label}`} disabled={disabled} onClick={() => onChange(Math.max(0, value - 1))}>
+        <Button variant="ghost" size="sm" aria-label={`Decrease ${label}`} disabled={disabled} onClick={() => onChange(Math.max(0, value - 1))}>
           −
         </Button>
         <input
@@ -88,7 +88,7 @@ function Counter({
             onChange(Number.isNaN(n) ? 0 : n);
           }}
         />
-        <Button size="sm" aria-label={`Increase ${label}`} disabled={disabled} onClick={() => onChange(value + 1)}>
+        <Button variant="ghost" size="sm" aria-label={`Increase ${label}`} disabled={disabled} onClick={() => onChange(value + 1)}>
           +
         </Button>
       </div>
@@ -185,7 +185,7 @@ export function VoteModal({
       onClose={onClose}
       footer={
         <>
-          <Button onClick={onClose}>Cancel</Button>
+          <Button variant="secondary" onClick={onClose}>Cancel</Button>
           <Button variant="primary" disabled={!canRecord} onClick={record}>
             Record vote
           </Button>
@@ -195,7 +195,7 @@ export function VoteModal({
       <div className="vote-modal">
         {editableSubject ? (
           <label className="vote-subject-field">
-            Voting on
+            <span className="vote-option-label">Voting on</span>
             <input type="text" autoFocus value={subjectText} onChange={(e) => setSubjectText(e.target.value)} />
           </label>
         ) : (
@@ -237,7 +237,7 @@ export function VoteModal({
             : 'Substantive: abstentions allowed, except for delegates present and voting.'}
         </p>
 
-        <p className="vote-eligible tabular">{n} delegates present</p>
+        <p className="vote-eligible tabular muted">{n} delegates present</p>
 
         {method === 'quick' ? (
           <>
@@ -254,12 +254,14 @@ export function VoteModal({
             <div className="vote-quick-actions">
               <Button
                 variant="ghost"
+                size="sm"
                 onClick={() => setQuick((q) => ({ ...q, against: Math.max(0, n - q.for - q.abstain) }))}
               >
                 Rest against
               </Button>
               <Button
                 variant="ghost"
+                size="sm"
                 onClick={() => setQuick((q) => ({ ...q, for: Math.max(0, n - q.against - q.abstain) }))}
               >
                 Rest for
@@ -274,12 +276,12 @@ export function VoteModal({
         ) : (
           <>
             <div className="vote-roll-actions">
-              <Button onClick={() => setAll('for')}>All for</Button>
-              <Button onClick={() => setAll('against')}>All against</Button>
-              <Button variant="ghost" onClick={() => setBallots({})}>
+              <Button variant="secondary" size="sm" onClick={() => setAll('for')}>All for</Button>
+              <Button variant="secondary" size="sm" onClick={() => setAll('against')}>All against</Button>
+              <Button variant="ghost" size="sm" onClick={() => setBallots({})}>
                 Clear
               </Button>
-              <span className="tabular">
+              <span className="tabular muted vote-roll-count">
                 {voted} of {n} voted
               </span>
             </div>
@@ -313,17 +315,17 @@ export function VoteModal({
         )}
 
         <div className="vote-result" role="status">
-          <span className="tabular">
-            For {result.for} · Against {result.against} · Abstain {result.abstain}
-          </span>
           {result.cast === 0 ? (
             <span className="muted">No votes entered yet.</span>
           ) : (
             <span className="tabular">
               <strong className={result.passed ? 'vote-pass' : 'vote-fail'}>{result.passed ? 'PASSES' : 'FAILS'}</strong>
-              {` — ${result.required} needed of ${result.cast} cast`}
+              <span className="muted">{` ${result.required} needed of ${result.cast} cast`}</span>
             </span>
           )}
+          <span className="tabular muted">
+            For {result.for} · Against {result.against} · Abstain {result.abstain}
+          </span>
         </div>
       </div>
     </Modal>

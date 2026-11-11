@@ -3,7 +3,8 @@ import type { FormEvent } from 'react';
 import { Button } from '../../components/ui/Button';
 import { DelegateChip } from '../../components/ui/DelegateChip';
 import { DelegateSelect } from '../../components/ui/DelegateSelect';
-import { TierButtons } from '../../components/ui/TierButtons';
+import { Menu } from '../../components/ui/Menu';
+import { PipRater } from '../../components/ui/PipRater';
 import { TimeInput } from '../../components/ui/TimeInput';
 import { describeMotion, MOTION_LABELS, motionNeeds, orderMotions } from '../../domain/motions';
 import { scoreInteraction } from '../../domain/scoring';
@@ -107,10 +108,9 @@ function RaiseForm() {
   };
 
   return (
-    <form className="card motions-form" onSubmit={submit}>
-      <div className="motions-card-head"><h2>Raise a motion</h2></div>
+    <form className="motions-form" onSubmit={submit}>
       <div className="motions-fields">
-        <div className="motions-field">
+        <div className="field motions-type">
           <label htmlFor="motions-type">Motion type</label>
           <select id="motions-type" aria-label="Motion type" value={type} onChange={(e) => changeType(e.target.value as MotionType)}>
             {TYPE_ORDER.map((t) => (
@@ -118,40 +118,31 @@ function RaiseForm() {
             ))}
           </select>
         </div>
-        <div className="motions-field">
-          <span className="motions-label">Proposed by</span>
+        <div className="field motions-proposer">
+          <span className="motions-caption">Proposed by</span>
           <DelegateSelect delegates={present} value={proposer} onChange={setProposer} label="Proposed by" placeholder="Proposed by…" />
         </div>
         {needs.topic && (
-          <div className="motions-field">
+          <div className="field motions-topic">
             <label htmlFor="motions-topic">{type === 'other' ? 'Description' : 'Topic'}</label>
             <input id="motions-topic" type="text" value={topic} onChange={(e) => setTopic(e.target.value)} />
           </div>
         )}
-        {needs.totalTime && (
-          <TimeInput
-            label="Total time"
-            seconds={total}
-            onChange={setTotal}
-            presets={type === 'extend' ? [120, 300, 600] : [300, 600, 900, 1200]}
-          />
-        )}
-        {needs.speakerTime && <TimeInput label="Speaker time" seconds={speaker} onChange={setSpeaker} presets={[30, 45, 60, 90]} />}
-        {type === 'mod' && speaker > 0 && <span className="muted">{`${Math.floor(total / speaker)} speakers`}</span>}
-      </div>
-      <div className="motions-field" role="group" aria-label="Motion quality">
-        <span className="motions-label">Motion quality</span>
-        <div className="motions-quality">
-          <TierButtons
-            selected={tier}
+        {needs.totalTime && <TimeInput label="Total time" seconds={total} onChange={setTotal} />}
+        {needs.speakerTime && <TimeInput label="Speaker time" seconds={speaker} onChange={setSpeaker} />}
+        <div className="field motions-quality">
+          <span className="motions-caption">Quality</span>
+          <PipRater
+            label="Motion quality"
+            size="md"
+            value={tier}
             onPick={setTier}
             points={(t) => scoreInteraction({ kind: 'motion_raised', tier: t, passed: false }, state.scoring)}
           />
         </div>
-      </div>
-      <div>
         <Button type="submit" variant="primary" disabled={!canSubmit}>Add to the floor</Button>
       </div>
+      {type === 'mod' && speaker > 0 && <p className="muted motions-hint">{`${Math.floor(total / speaker)} speakers`}</p>}
     </form>
   );
 }
@@ -167,28 +158,32 @@ function OnTheFloor() {
   };
 
   return (
-    <div className="card">
-      <div className="motions-card-head">
-        <h2>On the floor</h2>
-        <span className="badge">{pending.length}</span>
+    <div className="motions-block">
+      <div className="motions-head">
+        <h3>On the floor</h3>
+        <span className="muted tabular">{pending.length}</span>
+        {pending.length >= 2 && (
+          <Button className="motions-head-end" variant="ghost" onClick={() => dispatch({ type: 'motion/clearPending' })}>
+            Clear the floor
+          </Button>
+        )}
       </div>
       {pending.length === 0 ? (
-        <p className="muted">No motions on the floor.</p>
+        <p className="muted">No motions on the floor. Add one above.</p>
       ) : (
         <>
-          <p className="muted">Voted on in this order: most disruptive first, then longest.</p>
-          <ol className="motions-list">
+          <p className="muted motions-note">Voted on most disruptive first, then longest.</p>
+          <ol className="list motions-list">
             {pending.map((m, i) => {
               const proposer = delegateById(state, m.proposerId);
+              const position = i + 1;
               return (
-                <li key={m.id} className="motions-item" aria-label={describeMotion(m)}>
-                  <span className="motions-pos">{i + 1}</span>
+                <li key={m.id} className="list-row motions-item" aria-label={describeMotion(m)}>
+                  <span className="motions-pos tabular">{position}</span>
                   <span className="motions-desc">{describeMotion(m)}</span>
-                  <span className="motions-by">
-                    by {proposer ? <DelegateChip delegate={proposer} /> : m.proposerId}
-                  </span>
+                  <span className="motions-by">{proposer ? <DelegateChip delegate={proposer} /> : m.proposerId}</span>
                   <span className="motions-actions">
-                    <Button variant={i === 0 ? 'primary' : 'secondary'} onClick={() => setVoting(m)}>Vote</Button>
+                    <Button variant={i === 0 ? 'primary' : 'ghost'} onClick={() => setVoting(m)}>Vote</Button>
                     <Button
                       variant="ghost"
                       onClick={() => {
@@ -198,19 +193,24 @@ function OnTheFloor() {
                     >
                       Pass without vote
                     </Button>
-                    <Button variant="ghost" onClick={() => dispatch({ type: 'motion/setStatus', id: m.id, status: 'failed' })}>Fail</Button>
-                    <Button variant="ghost" onClick={() => dispatch({ type: 'motion/setStatus', id: m.id, status: 'withdrawn' })}>Withdraw</Button>
+                    <Menu
+                      label={`More for motion ${position}`}
+                      variant="ghost"
+                      size="sm"
+                      align="right"
+                      items={[
+                        { label: 'Fail', onSelect: () => dispatch({ type: 'motion/setStatus', id: m.id, status: 'failed' }) },
+                        { label: 'Withdraw', onSelect: () => dispatch({ type: 'motion/setStatus', id: m.id, status: 'withdrawn' }) },
+                      ]}
+                    >
+                      ⋯
+                    </Menu>
                   </span>
                 </li>
               );
             })}
           </ol>
         </>
-      )}
-      {pending.length >= 2 && (
-        <div className="motions-foot">
-          <Button variant="ghost" onClick={() => dispatch({ type: 'motion/clearPending' })}>Clear the floor</Button>
-        </div>
       )}
       {voting && (
         <VoteModal
@@ -235,23 +235,24 @@ function Earlier() {
   const shown = done.slice(0, MAX_EARLIER);
   const more = done.length - shown.length;
   return (
-    <div className="card">
-      <div className="motions-card-head"><h2>Earlier motions</h2></div>
+    <details className="motions-details">
+      <summary>{`Earlier motions (${done.length})`}</summary>
       {done.length === 0 ? (
         <p className="muted">No earlier motions.</p>
       ) : (
-        <ul className="motions-list">
+        <ul className="list motions-list">
           {shown.map((m) => {
             const proposer = delegateById(state, m.proposerId);
             return (
-              <li key={m.id} className="motions-item">
+              <li key={m.id} className="list-row motions-item">
                 <span className="motions-desc">{describeMotion(m)}</span>
                 <span className="motions-by">{proposer ? <DelegateChip delegate={proposer} /> : m.proposerId}</span>
-                <span className={`badge motions-status-${m.status}`}>{STATUS_LABEL[m.status]}</span>
+                <span className={`motions-status motions-status-${m.status}`}>{STATUS_LABEL[m.status]}</span>
                 <span className="muted">{`Session ${m.session}`}</span>
                 {(m.status === 'failed' || m.status === 'withdrawn') && (
                   <Button
                     variant="ghost"
+                    size="sm"
                     aria-label={`Bring back: ${describeMotion(m)}`}
                     onClick={() => dispatch({ type: 'motion/setStatus', id: m.id, status: 'pending' })}
                   >
@@ -264,14 +265,14 @@ function Earlier() {
         </ul>
       )}
       {more > 0 && <p className="muted">{`+${more} older`}</p>}
-    </div>
+    </details>
   );
 }
 
 function VoteRow({ v }: { v: VoteRecord }) {
   const { state, dispatch } = useCommittee();
   return (
-    <li className="motions-item">
+    <li className="list-row motions-item">
       <div className="motions-vote-meta">
         <span className="motions-desc">{v.subject}</span>
         <span className="tabular">{`For ${v.for} · Against ${v.against} · Abstain ${v.abstain}`}</span>
@@ -279,8 +280,8 @@ function VoteRow({ v }: { v: VoteRecord }) {
           {`${v.procedural ? 'Procedural' : 'Substantive'} · ${v.threshold === 'simple' ? 'Simple majority' : 'Two-thirds'} · Session ${v.session}`}
         </span>
       </div>
-      <span className={`badge ${v.passed ? 'motions-status-passed' : 'motions-status-failed'}`}>{v.passed ? 'Passed' : 'Failed'}</span>
-      <Button variant="ghost" aria-label={`Delete vote: ${v.subject}`} onClick={() => dispatch({ type: 'vote/remove', id: v.id })}>
+      <span className={`motions-status ${v.passed ? 'motions-status-passed' : 'motions-status-failed'}`}>{v.passed ? 'Passed' : 'Failed'}</span>
+      <Button variant="ghost" size="sm" aria-label={`Delete vote: ${v.subject}`} onClick={() => dispatch({ type: 'vote/remove', id: v.id })}>
         Delete
       </Button>
       {v.ballots !== null && (
@@ -302,20 +303,20 @@ function VoteRecordCard() {
   const [open, setOpen] = useState(false);
   const votes = [...state.votes].reverse();
   return (
-    <div className="card">
-      <div className="motions-card-head">
-        <h2>Vote record</h2>
-        <Button onClick={() => setOpen(true)}>New vote…</Button>
-      </div>
-      {votes.length === 0 ? (
-        <p className="muted">No votes recorded yet.</p>
-      ) : (
-        <ul className="motions-list">
-          {votes.map((v) => (
-            <VoteRow key={v.id} v={v} />
-          ))}
-        </ul>
-      )}
+    <div className="motions-vr">
+      <details className="motions-details">
+        <summary>{`Vote record (${votes.length})`}</summary>
+        {votes.length === 0 ? (
+          <p className="muted">No votes recorded yet.</p>
+        ) : (
+          <ul className="list motions-list">
+            {votes.map((v) => (
+              <VoteRow key={v.id} v={v} />
+            ))}
+          </ul>
+        )}
+      </details>
+      <Button className="motions-vr-new" size="sm" onClick={() => setOpen(true)}>New vote</Button>
       {open && <VoteModal subject="" editableSubject procedural={false} onClose={() => setOpen(false)} />}
     </div>
   );
@@ -324,6 +325,7 @@ function VoteRecordCard() {
 export function MotionsPanel() {
   return (
     <section className="motions" aria-label="Motions and voting">
+      <h2>Motions</h2>
       <RaiseForm />
       <OnTheFloor />
       <Earlier />

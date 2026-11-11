@@ -92,8 +92,10 @@ describe('raise form', () => {
     await user.selectOptions(screen.getByRole('combobox', { name: 'Motion type' }), 'mod');
     await pick(user, 'Kenya');
     await user.type(screen.getByLabelText('Topic'), '  Water  ');
-    await user.click(screen.getByRole('button', { name: /Insightful/ }));
-    await user.click(screen.getByRole('button', { name: '15:00' }));
+    await user.click(within(screen.getByRole('radiogroup', { name: 'Motion quality' })).getByRole('radio', { name: /^Insightful/ }));
+    const total = screen.getByLabelText('Total time');
+    await user.clear(total);
+    await user.type(total, '15:00{Enter}');
     await user.click(submit());
     const m = latest.state.motions[0];
     expect(m).toMatchObject({ type: 'mod', proposerId: 'ke', topic: 'Water', totalSeconds: 900, speakerSeconds: 60, status: 'pending' });
@@ -185,13 +187,20 @@ describe('floor', () => {
   it('Fail, Withdraw, Bring back and Clear the floor', async () => {
     const { user } = setup(three());
     const first = screen.getByRole('listitem', { name: /Unmoderated caucus/ });
-    await user.click(within(first).getByRole('button', { name: 'Withdraw' }));
+    await user.click(within(first).getByRole('button', { name: 'More for motion 1' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Withdraw' }));
     expect(latest.state.motions[1].status).toBe('withdrawn');
+    await user.click(screen.getByText('Earlier motions (1)', { selector: 'summary' }));
     await user.click(screen.getByRole('button', { name: /^Bring back: Unmoderated/ }));
     expect(latest.state.motions[1].status).toBe('pending');
+    const second = screen.getByRole('listitem', { name: /Unmoderated caucus/ });
+    await user.click(within(second).getByRole('button', { name: 'More for motion 1' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Fail' }));
+    expect(latest.state.motions[1].status).toBe('failed');
+    await user.click(screen.getByRole('button', { name: /^Bring back: Unmoderated/ }));
     await user.click(screen.getByRole('button', { name: 'Clear the floor' }));
     expect(latest.state.motions.every((m) => m.status === 'withdrawn')).toBe(true);
-    expect(screen.getByText('No motions on the floor.')).toBeInTheDocument();
+    expect(screen.getByText('No motions on the floor. Add one above.')).toBeInTheDocument();
   });
 });
 
@@ -201,6 +210,7 @@ describe('vote record', () => {
     s = reducer(s, { type: 'vote/record', subject: 'Old one', procedural: true, threshold: 'simple', counts: { for: 3, against: 1, abstain: 0 }, now: 1 });
     s = reducer(s, { type: 'vote/record', subject: 'New one', procedural: false, threshold: 'two_thirds', counts: { for: 1, against: 2, abstain: 1 }, ballots: { et: 'for' }, now: 2 });
     const { user } = setup(s);
+    await user.click(screen.getByText('Vote record (2)', { selector: 'summary' }));
     const subs = screen.getAllByText(/^(Old|New) one$/).map((e) => e.textContent);
     expect(subs).toEqual(['New one', 'Old one']);
     expect(screen.getByText('For 1 · Against 2 · Abstain 1')).toBeInTheDocument();
@@ -212,8 +222,9 @@ describe('vote record', () => {
 
   it('New vote records a substantive vote', async () => {
     const { user } = setup();
+    await user.click(screen.getByText('Vote record (0)', { selector: 'summary' }));
     expect(screen.getByText('No votes recorded yet.')).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'New vote…' }));
+    await user.click(screen.getByRole('button', { name: 'New vote' }));
     await user.type(screen.getByRole('textbox', { name: 'Voting on' }), 'Resolution 1');
     await user.click(screen.getByRole('radio', { name: 'Quick count' }));
     await vote(user, 3, 1);
