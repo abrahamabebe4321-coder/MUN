@@ -18,23 +18,39 @@ MUN Chair is a tool for chairing one Model UN committee. It helps you time debat
 - Backup and restore.
 - Light and dark theme.
 
-## Run it on your laptop
+## Use it on your laptop
 
-You need Node.js 20 or newer. In the project folder, run these commands one at a time.
+### Easiest: one file
+
+Download `MUN-Chair.html` from the repository (on GitHub, open the file and use the download button). Save it anywhere and double-click it to open it in Chrome or Edge. It works with no internet.
+
+To show the projector view, use the Projector button, drag that window to the projector screen, then click Fullscreen.
+
+Keep using the same file on the same laptop: your committee is saved in that browser. Use More -> Settings -> Download backup before switching laptops.
+
+### Online link
+
+After GitHub Pages is switched on once (Settings -> Pages -> Source: GitHub Actions), the app is at https://abrahamabebe4321-coder.github.io/MUN/ and updates automatically when the code changes. After the first visit it also works offline, and Chrome or Edge offer "Install app".
+
+### For developers
 
 ```bash
 npm install
 ```
 
 ```bash
-npm run build
+npm run dev
 ```
 
 ```bash
-npm run preview
+npm test
 ```
 
-Open the address it prints (normally http://localhost:4173). After the first visit the app keeps working without internet, and Chrome or Edge offer "Install app" in the address bar.
+```bash
+npm run release:single
+```
+
+The last command rebuilds `MUN-Chair.html`.
 
 ## Using it during a conference
 

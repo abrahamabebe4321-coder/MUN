@@ -11,4 +11,8 @@ describe('shouldRegister', () => {
     expect(shouldRegister({ PROD: true }, {})).toBe(false);
     expect(shouldRegister({ PROD: true }, undefined)).toBe(false);
   });
+  it('does not register on file://', () => {
+    expect(shouldRegister({ PROD: true }, { serviceWorker: {} }, 'file:')).toBe(false);
+    expect(shouldRegister({ PROD: true }, { serviceWorker: {} }, 'http:')).toBe(true);
+  });
 });

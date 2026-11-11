@@ -1,8 +1,11 @@
 export function shouldRegister(
   env: { PROD: boolean },
   nav: { serviceWorker?: unknown } | undefined,
+  protocol: string = typeof location === 'undefined' ? 'https:' : location.protocol,
 ): boolean {
-  return env.PROD && !!nav && 'serviceWorker' in nav;
+  return (
+    env.PROD && !!nav && 'serviceWorker' in nav && (protocol === 'http:' || protocol === 'https:')
+  );
 }
 
 export function registerServiceWorker(): void {

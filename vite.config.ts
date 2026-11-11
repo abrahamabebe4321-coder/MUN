@@ -1,6 +1,7 @@
 /// <reference types="vitest/config" />
 import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
+import { viteSingleFile } from 'vite-plugin-singlefile';
 
 function shortHash(input: string): string {
   // Two independent 32-bit FNV-1a style passes -> 10 hex chars (cache-busting only).
@@ -91,12 +92,16 @@ function serviceWorkerPlugin(): Plugin {
   };
 }
 
-export default defineConfig({
-  plugins: [react(), serviceWorkerPlugin()],
-  base: './',
-  test: {
-    environment: 'jsdom',
-    globals: true,
-    setupFiles: './src/test/setup.ts',
-  },
+export default defineConfig(({ mode }) => {
+  const single = mode === 'single';
+  return {
+    plugins: single ? [react(), viteSingleFile()] : [react(), serviceWorkerPlugin()],
+    base: './',
+    ...(single ? { build: { outDir: 'dist-single', assetsInlineLimit: 100000000 } } : {}),
+    test: {
+      environment: 'jsdom',
+      globals: true,
+      setupFiles: './src/test/setup.ts',
+    },
+  };
 });
