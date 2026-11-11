@@ -134,6 +134,7 @@ export function ChairLayout() {
               <Button onClick={() => setConfirm(null)}>Cancel</Button>
               <Button
                 variant="danger"
+                className="btn-solid"
                 onClick={() => {
                   dispatch({ type: 'committee/setStage', stage: 'ended' });
                   setConfirm(null);

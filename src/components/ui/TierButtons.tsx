@@ -34,8 +34,13 @@ export function TierButtons({
             title={label}
             onClick={() => onPick(tier)}
           >
-            <span>{compact ? tier : label}</span>
-            {ptsText !== null && <span className="tier-points">{ptsText}</span>}
+            <span className="tier-pips" aria-hidden="true">
+              {TIERS.map((n) => (
+                <span key={n} className={`tier-pip${n <= tier ? ' is-filled' : ''}`} />
+              ))}
+            </span>
+            {compact ? <span className="sr-only">{tier}</span> : <span className="tier-label">{label}</span>}
+            {!compact && ptsText !== null && <span className="tier-points">{ptsText}</span>}
           </button>
         )
       })}

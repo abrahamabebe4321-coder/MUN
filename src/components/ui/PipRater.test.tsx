@@ -1,0 +1,71 @@
+import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { PipRater } from './PipRater'
+
+describe('PipRater', () => {
+  it('renders a radiogroup of three pips with checked state', () => {
+    render(<PipRater label="Quality" value={2} onPick={() => {}} />)
+    expect(screen.getByRole('radiogroup', { name: 'Quality' })).toBeInTheDocument()
+    expect(screen.getAllByRole('radio')).toHaveLength(3)
+    expect(screen.getByRole('radio', { name: 'Decent' })).toHaveAttribute('aria-checked', 'true')
+    expect(screen.getByRole('radio', { name: 'Works' })).toHaveAttribute('aria-checked', 'false')
+    expect(screen.getByRole('radio', { name: 'Works' })).toHaveClass('is-filled')
+    expect(screen.getByRole('radio', { name: 'Insightful' })).not.toHaveClass('is-filled')
+  })
+  it('includes points in the accessible name', () => {
+    render(<PipRater label="Q" value={null} onPick={() => {}} points={(t) => t * 4} />)
+    expect(screen.getByRole('radio', { name: 'Insightful (12 points)' })).toBeInTheDocument()
+  })
+  it('calls onPick, and onClear for the selected pip when provided', async () => {
+    const onPick = vi.fn()
+    const onClear = vi.fn()
+    const { rerender } = render(<PipRater label="Q" value={2} onPick={onPick} onClear={onClear} />)
+    await userEvent.click(screen.getByRole('radio', { name: 'Insightful' }))
+    expect(onPick).toHaveBeenCalledWith(3)
+    await userEvent.click(screen.getByRole('radio', { name: 'Decent' }))
+    expect(onClear).toHaveBeenCalledTimes(1)
+    expect(onPick).toHaveBeenCalledTimes(1)
+    rerender(<PipRater label="Q" value={2} onPick={onPick} />)
+    await userEvent.click(screen.getByRole('radio', { name: 'Decent' }))
+    expect(onPick).toHaveBeenLastCalledWith(2)
+  })
+  it('previews on hover', async () => {
+    render(<PipRater label="Q" value={null} onPick={() => {}} />)
+    await userEvent.hover(screen.getByRole('radio', { name: 'Decent' }))
+    expect(screen.getByRole('radio', { name: 'Works' })).toHaveClass('is-preview')
+    expect(screen.getByRole('radio', { name: 'Decent' })).toHaveClass('is-preview')
+    expect(screen.getByRole('radio', { name: 'Insightful' })).not.toHaveClass('is-preview')
+  })
+  it('uses roving tabindex and arrow keys', async () => {
+    render(<PipRater label="Q" value={null} onPick={() => {}} />)
+    const [a, b, c] = screen.getAllByRole('radio')
+    expect(a).toHaveAttribute('tabindex', '0')
+    expect(b).toHaveAttribute('tabindex', '-1')
+    a.focus()
+    await userEvent.keyboard('{ArrowRight}')
+    expect(b).toHaveFocus()
+    await userEvent.keyboard('{ArrowRight}{ArrowRight}')
+    expect(c).toHaveFocus()
+    await userEvent.keyboard('{ArrowLeft}')
+    expect(b).toHaveFocus()
+  })
+  it('puts the checked pip in the tab order', () => {
+    render(<PipRater label="Q" value={3} onPick={() => {}} />)
+    const [a, , c] = screen.getAllByRole('radio')
+    expect(c).toHaveAttribute('tabindex', '0')
+    expect(a).toHaveAttribute('tabindex', '-1')
+  })
+  it('shows a label when asked', () => {
+    const { rerender } = render(<PipRater label="Q" value={2} onPick={() => {}} points={() => 12} showLabel />)
+    expect(screen.getByText('Decent +12')).toBeInTheDocument()
+    rerender(<PipRater label="Q" value={null} onPick={() => {}} showLabel />)
+    expect(screen.getByText('Not rated')).toHaveClass('muted')
+  })
+  it('disables pips', async () => {
+    const onPick = vi.fn()
+    render(<PipRater label="Q" value={null} onPick={onPick} disabled />)
+    await userEvent.click(screen.getAllByRole('radio')[0])
+    expect(onPick).not.toHaveBeenCalled()
+    screen.getAllByRole('radio').forEach((r) => expect(r).toBeDisabled())
+  })
+})

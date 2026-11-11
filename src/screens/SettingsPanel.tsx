@@ -224,6 +224,7 @@ export function SettingsPanel() {
               <Button onClick={() => setPending(null)}>Cancel</Button>
               <Button
                 variant="danger"
+                className="btn-solid"
                 onClick={() => {
                   dispatch({ type: 'state/replace', state: pending })
                   setPending(null)
@@ -248,6 +249,7 @@ export function SettingsPanel() {
               <Button onClick={() => setConfirmNew(false)}>Cancel</Button>
               <Button
                 variant="danger"
+                className="btn-solid"
                 onClick={() => {
                   dispatch({ type: 'state/replace', state: createCommittee() })
                   setConfirmNew(false)

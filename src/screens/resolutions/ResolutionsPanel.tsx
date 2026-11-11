@@ -372,6 +372,7 @@ function ResolutionCard({ res }: { res: Resolution }) {
               <Button onClick={() => setConfirmDelete(false)}>Cancel</Button>
               <Button
                 variant="danger"
+                className="btn-solid"
                 onClick={() => {
                   dispatch({ type: 'resolution/remove', id: res.id });
                   setConfirmDelete(false);
