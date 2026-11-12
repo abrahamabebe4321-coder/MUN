@@ -5,6 +5,7 @@ import { Modal } from '../components/ui/Modal';
 import { quorum } from '../domain/voting';
 import { useCommittee } from '../state/CommitteeContext';
 import { getProjectorScreen, popupFeatures } from '../projectorScreen';
+import { CommitteesDialog } from './CommitteesDialog';
 import { ShareDialog, statusLabel } from '../sync/ShareDialog';
 import { NavContext } from './nav';
 import { TABS } from './tabs';
@@ -18,8 +19,9 @@ function isEditable(t: EventTarget | null): boolean {
 }
 
 export function ChairLayout() {
-  const { state, dispatch, undo, redo, canUndo, canRedo, sync } = useCommittee();
+  const { state, dispatch, undo, redo, canUndo, canRedo, sync, cid } = useCommittee();
   const [sharing, setSharing] = useState(false);
+  const [committees, setCommittees] = useState(false);
   const live = statusLabel(sync);
   const q = quorum(state.delegates);
   const [tab, setTab] = useState<TabId>(() => (q.present === 0 ? 'rollcall' : 'debate'));
@@ -78,7 +80,7 @@ export function ChairLayout() {
               onClick={() => {
                 // open synchronously (user activation), then move to the projector display
                 const win = window.open(
-                  `${window.location.pathname}#/projector`,
+                  `${window.location.pathname}?c=${encodeURIComponent(cid)}#/projector`,
                   'mun-projector',
                   popupFeatures(null),
                 );
@@ -109,6 +111,7 @@ export function ChairLayout() {
               variant="secondary"
               size="sm"
               items={[
+                { label: 'Committees…', onSelect: () => setCommittees(true) },
                 { label: 'Redo', onSelect: redo, disabled: !canRedo, hint: 'Ctrl+Shift+Z' },
                 { label: 'Roll call', onSelect: () => setTab('rollcall') },
                 { label: 'Settings', onSelect: () => setTab('settings') },
@@ -153,6 +156,7 @@ export function ChairLayout() {
         <NavContext.Provider value={navigate}>{active.render()}</NavContext.Provider>
       </div>
 
+      {committees && <CommitteesDialog onClose={() => setCommittees(false)} />}
       {sharing && <ShareDialog sync={sync} onClose={() => setSharing(false)} />}
       {confirm === 'next' && (
         <Modal

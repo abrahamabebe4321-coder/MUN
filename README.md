@@ -28,7 +28,7 @@ To show the projector view, use the Projector button, then click Fullscreen.
 
 With the projector connected as a second display (Windows: Win+P, then Extend; Mac: System Settings, Displays, arrange rather than mirror), clicking Projector opens the projector window on that display. Chrome and Edge may ask once to allow "window management"; choose Allow. Fullscreen then fills only the projector display, so the laptop screen stays free for the dashboard. If the displays are mirrored, fullscreen covers both screens; press Esc to leave it.
 
-Keep using the same file on the same laptop: your committee is saved in that browser. Use More -> Settings -> Download backup before switching laptops.
+Keep using the same file on the same laptop: your committees are saved in that browser. Use More -> Committees to switch between them or start a new one; each committee is saved separately on the laptop and has its own share link. Use More -> Settings -> Download backup before switching laptops.
 
 ### Online link
 
@@ -108,7 +108,7 @@ Three insightful POIs (18 points) equal one insightful speech. Every value can b
 
 ## Your data
 
-Everything is stored only in that browser, on that laptop. Before you change laptop or clear browser data, use Settings (in the "More" menu) -> Download backup. On the new machine, use Settings -> Restore from backup to load it.
+Everything is stored only in that browser, on that laptop. Every committee is saved separately; More -> Committees lists them, and starting a new committee never erases the others. Each tab keeps its own committee, so you can run two committees (each with its own share link) in two tabs. Before you change laptop or clear browser data, use Settings (in the "More" menu) -> Download backup. On the new machine, use Settings -> Restore from backup to load it as a new committee.
 
 ## Development
 

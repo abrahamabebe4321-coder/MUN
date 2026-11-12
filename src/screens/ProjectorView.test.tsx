@@ -5,7 +5,7 @@ import { createCommittee } from '../state/state';
 import type { CommitteeState } from '../state/state';
 import { reducer } from '../state/reducer';
 import type { Action } from '../state/reducer';
-import { saveState, STORAGE_KEY } from '../state/storage';
+import { saveState, committeeKey } from '../state/storage';
 import { THEME_KEY } from '../theme';
 
 const T0 = new Date('2026-01-01T12:00:00Z').getTime();
@@ -36,6 +36,7 @@ function running(extra: Action[] = []): CommitteeState {
 
 beforeEach(() => {
   localStorage.clear();
+  window.history.replaceState(null, '', '/?c=c-proj0001');
   vi.useFakeTimers();
   vi.setSystemTime(T0);
 });
@@ -64,13 +65,13 @@ describe('ProjectorView', () => {
   });
 
   it('waits during setup', () => {
-    saveState(createCommittee());
+    saveState('c-proj0001', createCommittee());
     render(<ProjectorView />);
     expect(screen.getByText('Waiting for the chair to start the committee…')).toBeInTheDocument();
   });
 
   it('shows header details', () => {
-    saveState(running());
+    saveState('c-proj0001', running());
     render(<ProjectorView />);
     expect(screen.getByText('Security Council')).toBeInTheDocument();
     expect(screen.getByText('Water rights')).toBeInTheDocument();
@@ -79,7 +80,7 @@ describe('ProjectorView', () => {
   });
 
   it('shows a moderated caucus with speaker and queue', () => {
-    saveState(
+    saveState('c-proj0001', 
       running([
         { type: 'debate/start', mode: 'mod', topic: 'Dams', totalSeconds: 600, speakerSeconds: 60 },
         ...(['fr', 'de', 'jp', 'br', 'in', 'kr', 'mx', 'ca'] as const).map(
@@ -100,7 +101,7 @@ describe('ProjectorView', () => {
   });
 
   it('shows only the big timer for an unmoderated caucus', () => {
-    saveState(running([{ type: 'debate/start', mode: 'unmod', totalSeconds: 300 }]));
+    saveState('c-proj0001', running([{ type: 'debate/start', mode: 'unmod', totalSeconds: 300 }]));
     render(<ProjectorView />);
     expect(screen.getByText('Unmoderated caucus')).toBeInTheDocument();
     expect(screen.getByText('Time remaining')).toBeInTheDocument();
@@ -113,7 +114,7 @@ describe('ProjectorView', () => {
       { type: 'motion/add', motionType: 'gsl', proposerId: 'de', speakerSeconds: 60 },
       { type: 'motion/add', motionType: 'unmod', proposerId: 'jp', totalSeconds: 300 },
     ]);
-    saveState(withMotions);
+    saveState('c-proj0001', withMotions);
     const { unmount } = render(<ProjectorView />);
     expect(screen.getByText('Motions on the floor')).toBeInTheDocument();
     const items = screen.getAllByRole('listitem').map((li) => li.textContent ?? '');
@@ -123,7 +124,7 @@ describe('ProjectorView', () => {
     expect(motionItems[1]).toContain('General speakers list');
     expect(motionItems[1]).toContain('Germany');
     unmount();
-    saveState(running());
+    saveState('c-proj0001', running());
     render(<ProjectorView />);
     expect(screen.queryByText('Motions on the floor')).not.toBeInTheDocument();
   });
@@ -137,7 +138,7 @@ describe('ProjectorView', () => {
       counts: { for: 5, against: 2, abstain: 1 },
       now: T0 - 10_000,
     };
-    saveState(running([vote]));
+    saveState('c-proj0001', running([vote]));
     const { unmount } = render(<ProjectorView />);
     const banner = screen.getByRole('status');
     expect(banner).toHaveClass('is-passed');
@@ -145,31 +146,31 @@ describe('ProjectorView', () => {
     expect(banner).toHaveTextContent('PASSED');
     expect(banner).toHaveTextContent('For 5, against 2, abstain 1');
     unmount();
-    saveState(running([{ ...vote, now: T0 - 31_000 } as Action]));
+    saveState('c-proj0001', running([{ ...vote, now: T0 - 31_000 } as Action]));
     render(<ProjectorView />);
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });
 
   it('shows the ended message', () => {
-    saveState({ ...running(), stage: 'ended' });
+    saveState('c-proj0001', { ...running(), stage: 'ended' });
     render(<ProjectorView />);
     expect(screen.getByText('The conference has ended')).toBeInTheDocument();
     expect(screen.queryByText('Next speakers')).not.toBeInTheDocument();
   });
 
   it('updates on a storage event', () => {
-    saveState(running());
+    saveState('c-proj0001', running());
     render(<ProjectorView />);
     expect(screen.getByText('Debate paused')).toBeInTheDocument();
-    saveState(running([{ type: 'debate/start', mode: 'gsl' }]));
+    saveState('c-proj0001', running([{ type: 'debate/start', mode: 'gsl' }]));
     act(() => {
-      window.dispatchEvent(new StorageEvent('storage', { key: STORAGE_KEY }));
+      window.dispatchEvent(new StorageEvent('storage', { key: committeeKey('c-proj0001') }));
     });
     expect(screen.getByText('General speakers list')).toBeInTheDocument();
   });
 
   it('never shows scores or leaderboard', () => {
-    saveState(
+    saveState('c-proj0001', 
       running([
         {
           type: 'interaction/add',
@@ -188,7 +189,7 @@ describe('ProjectorView', () => {
 
 describe('ProjectorView POIs', () => {
   it('lists queued POI names in order, capped at six, without ratings', () => {
-    saveState(
+    saveState('c-proj0001', 
       running([
         { type: 'debate/start', mode: 'gsl', speakerSeconds: 60 },
         { type: 'speakers/setCurrent', id: 'fr' },
@@ -203,12 +204,12 @@ describe('ProjectorView POIs', () => {
     expect(screen.getByText('+1 more')).toBeInTheDocument();
   });
   it('hides the line when nobody is queued', () => {
-    saveState(running([{ type: 'debate/start', mode: 'gsl' }]));
+    saveState('c-proj0001', running([{ type: 'debate/start', mode: 'gsl' }]));
     render(<ProjectorView />);
     expect(screen.queryByText('Points of information')).toBeNull();
   });
   it('labels the fullscreen button and follows fullscreenchange', () => {
-    saveState(running());
+    saveState('c-proj0001', running());
     render(<ProjectorView />);
     expect(screen.getByRole('button', { name: 'Fullscreen' })).toBeInTheDocument();
     Object.defineProperty(document, 'fullscreenElement', { value: document.body, configurable: true });
@@ -231,7 +232,7 @@ describe('ProjectorView POIs', () => {
   };
 
   it('requests plain fullscreen synchronously on click and shows the Esc note', async () => {
-    saveState(running());
+    saveState('c-proj0001', running());
     const req = vi.fn().mockResolvedValue(undefined);
     document.documentElement.requestFullscreen = req;
     render(<ProjectorView />);
@@ -247,7 +248,7 @@ describe('ProjectorView POIs', () => {
   });
 
   it('passes the prefetched projector screen to requestFullscreen', async () => {
-    saveState(running());
+    saveState('c-proj0001', running());
     const a = { availLeft: 0, availTop: 0, availWidth: 1, availHeight: 1, isPrimary: true, label: 'a' };
     const b = { availLeft: 5, availTop: 0, availWidth: 1, availHeight: 1, isPrimary: false, label: 'b' };
     (window as any).getScreenDetails = async () => ({ screens: [a, b], currentScreen: a }); // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -261,7 +262,7 @@ describe('ProjectorView POIs', () => {
   });
 
   it('shows a blocked message when fullscreen fails', async () => {
-    saveState(running());
+    saveState('c-proj0001', running());
     const req = vi.fn().mockRejectedValue(new Error('no'));
     document.documentElement.requestFullscreen = req;
     render(<ProjectorView />);
@@ -269,5 +270,22 @@ describe('ProjectorView POIs', () => {
     screen.getByRole('button', { name: 'Fullscreen' }).click();
     await flush();
     expect(screen.getByRole('status')).toHaveTextContent('Fullscreen was blocked. Click Fullscreen again.');
+  });
+
+  it('reads the committee from its own ?c= and ignores others', () => {
+    saveState('c-proj0001', running());
+    saveState('c-proj0002', { ...running(), name: 'Other Council' });
+    window.history.replaceState(null, '', '/?c=c-proj0002');
+    render(<ProjectorView />);
+    expect(screen.getByText('Other Council')).toBeInTheDocument();
+    expect(screen.queryByText('Security Council')).toBeNull();
+  });
+
+  it('falls back to the last active committee without ?c=', () => {
+    saveState('c-proj0003', { ...running(), name: 'Last One' });
+    localStorage.setItem('mun-chair:active', 'c-proj0003');
+    window.history.replaceState(null, '', '/');
+    render(<ProjectorView />);
+    expect(screen.getByText('Last One')).toBeInTheDocument();
   });
 });

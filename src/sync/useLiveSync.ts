@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { createClient, LiveMap, LiveObject } from '@liveblocks/client';
 import type { Client } from '@liveblocks/client';
 import type { CommitteeState } from '../state/state';
+import { getEntry, setRoom } from '../state/library';
 import { LIVEBLOCKS_PUBLIC_KEY } from './config';
 import {
   applyDiff,
@@ -15,18 +16,12 @@ import type { LiveFactory, LiveMapLike, LiveObjectLike, RootLike, SharedCommitte
 
 export type SyncStatus = 'off' | 'connecting' | 'connected' | 'reconnecting' | 'error';
 
-export const ROOM_KEY = 'mun-chair:room';
-
 export interface SyncApi {
   status: SyncStatus;
   /** Number of other people in the room. */
   others: number;
   roomId: string | null;
   shareUrl: string | null;
-  /** Set while the join-confirm modal should be shown. */
-  pendingJoin: { name: string } | null;
-  confirmJoin: () => void;
-  cancelJoin: () => void;
   /** Create a new room from this committee and join it. */
   startSharing: () => string;
   /** Leave the room and keep the local copy. */
@@ -43,8 +38,6 @@ function getClient(): Client {
   client ??= createClient({ publicApiKey: LIVEBLOCKS_PUBLIC_KEY });
   return client;
 }
-
-const ROOM_RE = /^[A-Za-z0-9_-]{1,64}$/;
 
 function safe(fn: () => void) {
   try {
@@ -63,35 +56,10 @@ function setUrlRoom(roomId: string | null) {
   });
 }
 
-function setStoredRoom(roomId: string | null) {
-  safe(() => {
-    if (roomId) localStorage.setItem(ROOM_KEY, roomId);
-    else localStorage.removeItem(ROOM_KEY);
-  });
-}
-
-/** Room from `?room=` (wins) or from the last joined room. */
-export function initialRoomId(): string | null {
-  let fromUrl: string | null = null;
-  safe(() => {
-    fromUrl = new URLSearchParams(window.location.search).get('room');
-  });
-  if (fromUrl && ROOM_RE.test(fromUrl)) return fromUrl;
-  let stored: string | null = null;
-  safe(() => {
-    stored = localStorage.getItem(ROOM_KEY);
-  });
-  return stored && ROOM_RE.test(stored) ? stored : null;
-}
-
 export function randomBase36(n: number): string {
   let out = '';
   while (out.length < n) out += Math.floor(Math.random() * 36 ** 6).toString(36);
   return out.slice(0, n);
-}
-
-function isEmptyCommittee(s: SharedCommittee): boolean {
-  return s.stage === 'setup' && s.delegates.length === 0;
 }
 
 function mapStatus(s: string): SyncStatus {
@@ -102,14 +70,14 @@ function mapStatus(s: string): SyncStatus {
 }
 
 export function useLiveSync(
+  cid: string,
   present: CommitteeState,
   dispatchRemote: (state: CommitteeState) => void,
   dispatchTag: (tag: string) => void,
 ): SyncApi {
-  const [roomId, setRoomId] = useState<string | null>(() => initialRoomId());
+  const [roomId, setRoomId] = useState<string | null>(() => getEntry(cid)?.roomId ?? null);
   const [status, setStatus] = useState<SyncStatus>('off');
   const [others, setOthers] = useState(0);
-  const [pendingJoin, setPendingJoin] = useState<{ name: string } | null>(null);
 
   const presentRef = useRef(present);
   presentRef.current = present;
@@ -118,21 +86,20 @@ export function useLiveSync(
   const rootRef = useRef<RootLike | null>(null);
   const roomRef = useRef<{ batch: (fn: () => void) => void } | null>(null);
   const lastSynced = useRef<CommitteeState | null>(null);
-  const decision = useRef<{ confirm: () => void; cancel: () => void } | null>(null);
 
   const stopSharing = useCallback(() => {
     setUrlRoom(null);
-    setStoredRoom(null);
+    setRoom(cid, null);
     setRoomId(null);
-  }, []);
+  }, [cid]);
 
   const startSharing = useCallback(() => {
     const id = `mun-${randomBase36(10)}`;
     setUrlRoom(id);
-    setStoredRoom(id);
+    setRoom(cid, id);
     setRoomId(id);
     return id;
-  }, []);
+  }, [cid]);
 
   // Every laptop in a room mints ids with its own tag so they never collide.
   useEffect(() => {
@@ -146,7 +113,6 @@ export function useLiveSync(
       return;
     }
     setUrlRoom(roomId);
-    setStoredRoom(roomId);
     let cancelled = false;
     const unsubs: Array<() => void> = [];
     setStatus('connecting');
@@ -212,27 +178,9 @@ export function useLiveSync(
           go(r);
           return;
         }
-        const remote = readStorage(r);
-        const local = presentRef.current;
-        if (isEmptyCommittee(local) || sameCommittee(mergeRemote(remote, local), local)) {
-          adopt(remote);
-          go(r);
-          return;
-        }
-        decision.current = {
-          confirm: () => {
-            setPendingJoin(null);
-            decision.current = null;
-            adopt(readStorage(r));
-            go(r);
-          },
-          cancel: () => {
-            setPendingJoin(null);
-            decision.current = null;
-            stopSharing();
-          },
-        };
-        setPendingJoin({ name: remote.name || 'Untitled committee' });
+        // A committee bound to a room always follows the room.
+        adopt(readStorage(r));
+        go(r);
       })
       .catch(() => {
         if (!cancelled) setStatus('error');
@@ -245,20 +193,15 @@ export function useLiveSync(
       roomRef.current = null;
       lastSynced.current = null;
       flushRef.current = null;
-      decision.current = null;
-      setPendingJoin(null);
       leave();
     };
-  }, [roomId, stopSharing]);
+  }, [roomId]);
 
   const flushRef = useRef<(() => void) | null>(null);
   // Local -> remote: push whatever changed since the last sync.
   useEffect(() => {
     flushRef.current?.();
   }, [present]);
-
-  const confirmJoin = useCallback(() => decision.current?.confirm(), []);
-  const cancelJoin = useCallback(() => decision.current?.cancel(), []);
 
   const shareUrl = roomId
     ? (() => {
@@ -270,5 +213,5 @@ export function useLiveSync(
       })()
     : null;
 
-  return { status, others, roomId, shareUrl, pendingJoin, confirmJoin, cancelJoin, startSharing, stopSharing };
+  return { status, others, roomId, shareUrl, startSharing, stopSharing };
 }

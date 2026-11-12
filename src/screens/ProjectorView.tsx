@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useStoredCommittee } from '../state/CommitteeContext';
+import { projectorCid, useStoredCommittee } from '../state/CommitteeContext';
 import type { CommitteeState } from '../state/state';
 import { useNow } from '../hooks/useNow';
 import { describeMotion, orderMotions } from '../domain/motions';
@@ -212,7 +212,7 @@ function Content({ state, now }: { state: CommitteeState; now: number }) {
 }
 
 export function ProjectorView() {
-  const state = useStoredCommittee();
+  const state = useStoredCommittee(projectorCid());
   const now = useNow(true, 250);
   useEffect(() => {
     applyStoredTheme();

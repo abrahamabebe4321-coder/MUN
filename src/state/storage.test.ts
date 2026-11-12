@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createCommittee } from './state';
-import { exportJson, importJson, loadState, parseState, saveState, STORAGE_KEY } from './storage';
+import { exportJson, importJson, committeeKey, loadState, parseState, saveState } from './storage';
 
 function fakeStorage() {
   const data: Record<string, string> = {};
@@ -15,9 +15,9 @@ describe('storage', () => {
   it('round trips', () => {
     const st = fakeStorage();
     const s = { ...createCommittee(), name: 'X' };
-    saveState(s, st);
-    expect(st.data[STORAGE_KEY]).toBeDefined();
-    expect(loadState(st)).toEqual(s);
+    saveState('c-aaaaaaaa', s, st);
+    expect(st.data[committeeKey('c-aaaaaaaa')]).toBeDefined();
+    expect(loadState('c-aaaaaaaa', st)).toEqual(s);
   });
 
   it('loads older saves that lack pinnedLastId and poiQueue', () => {
@@ -31,19 +31,20 @@ describe('storage', () => {
 
   it('returns null for missing or bad data', () => {
     const st = fakeStorage();
-    expect(loadState(st)).toBeNull();
-    st.setItem(STORAGE_KEY, '{nope');
-    expect(loadState(st)).toBeNull();
-    st.setItem(STORAGE_KEY, '{"version":2}');
-    expect(loadState(st)).toBeNull();
+    const key = committeeKey('c-x');
+    expect(loadState('c-x', st)).toBeNull();
+    st.setItem(key, '{nope');
+    expect(loadState('c-x', st)).toBeNull();
+    st.setItem(key, '{"version":2}');
+    expect(loadState('c-x', st)).toBeNull();
   });
 
   it('save swallows exceptions', () => {
-    expect(() => saveState(createCommittee(), { setItem: () => { throw new Error('full'); } })).not.toThrow();
+    expect(() => saveState('c-x', createCommittee(), { setItem: () => { throw new Error('full'); } })).not.toThrow();
   });
 
   it('load swallows exceptions', () => {
-    expect(loadState({ getItem: () => { throw new Error('denied'); } })).toBeNull();
+    expect(loadState('c-x', { getItem: () => { throw new Error('denied'); } })).toBeNull();
   });
 
   it('parseState validates shape', () => {

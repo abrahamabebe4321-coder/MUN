@@ -40,6 +40,7 @@ vi.mock('@liveblocks/client', async () => {
 });
 
 import { CommitteeProvider, useCommittee } from '../state/CommitteeContext';
+import { createEntry, getEntry } from '../state/library';
 import { createCommittee } from '../state/state';
 import { initRoot, readStorage } from './storageModel';
 import type { RootLike } from './storageModel';
@@ -54,6 +55,7 @@ function Probe() {
       <span data-testid="tag">{state.clientTag ?? ''}</span>
       <button onClick={() => dispatch({ type: 'committee/update', name: 'Local edit' })}>edit</button>
       <button onClick={() => sync.startSharing()}>share</button>
+      <button onClick={() => sync.stopSharing()}>stop</button>
     </div>
   );
 }
@@ -65,31 +67,35 @@ const withDelegate = (name: string) => ({
   delegates: [{ id: 'ke', name: 'Kenya', flag: 'ke', attendance: 'present' as const }],
 });
 
+function room(state = createCommittee(), roomId: string | null = 'test-room') {
+  return createEntry({ roomId, state });
+}
+
 beforeEach(() => {
   localStorage.clear();
-  window.history.replaceState(null, '', '/?room=test-room');
+  window.history.replaceState(null, '', '/');
   h.root = new FakeObject();
   h.deepCb = null;
 });
 
 describe('live sync', () => {
   it('is off without a room', () => {
-    window.history.replaceState(null, '', '/');
-    render(<CommitteeProvider><Probe /></CommitteeProvider>);
+    window.history.replaceState(null, '', '/?room=test-room');
+    render(<CommitteeProvider cid={room(createCommittee(), null)}><Probe /></CommitteeProvider>);
     expect(screen.getByTestId('status')).toHaveTextContent('off');
   });
 
   it('initialises an empty room from the local committee and tags ids', async () => {
-    render(<CommitteeProvider initial={withDelegate('Mine')}><Probe /></CommitteeProvider>);
+    render(<CommitteeProvider cid={room()} initial={withDelegate('Mine')}><Probe /></CommitteeProvider>);
     await waitFor(() => expect((h.root as FakeObject).get('meta')).toBeDefined());
     expect(readStorage(h.root as RootLike).name).toBe('Mine');
     expect(screen.getByTestId('tag').textContent).toHaveLength(6);
-    expect(localStorage.getItem('mun-chair:room')).toBe('test-room');
+    expect(localStorage.getItem('mun-chair:room')).toBeNull();
   });
 
   it('pushes local actions with applyDiff and adopts remote updates', async () => {
     const user = userEvent.setup();
-    render(<CommitteeProvider initial={withDelegate('Mine')}><Probe /></CommitteeProvider>);
+    render(<CommitteeProvider cid={room()} initial={withDelegate('Mine')}><Probe /></CommitteeProvider>);
     await waitFor(() => expect(h.deepCb).not.toBeNull());
     await user.click(screen.getByText('edit'));
     await waitFor(() =>
@@ -102,31 +108,43 @@ describe('live sync', () => {
 
   it('joins silently when the local committee is empty', async () => {
     initRoot(h.root as RootLike, withDelegate('Shared'), fakeFactory);
-    render(<CommitteeProvider><Probe /></CommitteeProvider>);
+    render(<CommitteeProvider cid={room()}><Probe /></CommitteeProvider>);
     await waitFor(() => expect(screen.getByTestId('name')).toHaveTextContent('Shared'));
     expect(screen.queryByRole('dialog')).toBeNull();
   });
 
-  it('asks before replacing a different local committee', async () => {
-    const user = userEvent.setup();
+  it('follows the room without asking when a non-empty committee is bound to it', async () => {
     initRoot(h.root as RootLike, withDelegate('Shared'), fakeFactory);
-    render(<CommitteeProvider initial={withDelegate('Mine')}><Probe /></CommitteeProvider>);
-    await screen.findByText(/Join the shared committee/);
-    expect(screen.getByTestId('name')).toHaveTextContent('Mine');
-    await user.click(screen.getByRole('button', { name: 'Join' }));
+    render(<CommitteeProvider cid={room()} initial={withDelegate('Mine')}><Probe /></CommitteeProvider>);
     await waitFor(() => expect(screen.getByTestId('name')).toHaveTextContent('Shared'));
+    expect(screen.queryByRole('dialog')).toBeNull();
   });
 
-  it('cancel leaves the room and keeps the local committee', async () => {
+  it('takes the room only from the committee, not from the URL', () => {
+    window.history.replaceState(null, '', '/?room=test-room');
+    render(<CommitteeProvider cid={room(createCommittee(), null)}><Probe /></CommitteeProvider>);
+    expect(screen.getByTestId('status')).toHaveTextContent('off');
+  });
+
+  it('start and stop sharing bind the room to the committee and the URL', async () => {
     const user = userEvent.setup();
-    initRoot(h.root as RootLike, withDelegate('Shared'), fakeFactory);
-    render(<CommitteeProvider initial={withDelegate('Mine')}><Probe /></CommitteeProvider>);
-    await screen.findByText(/Join the shared committee/);
-    await user.click(screen.getByRole('button', { name: 'Cancel' }));
-    await waitFor(() => expect(screen.getByTestId('status')).toHaveTextContent('off'));
-    expect(screen.getByTestId('name')).toHaveTextContent('Mine');
-    expect(localStorage.getItem('mun-chair:room')).toBeNull();
-    expect(window.location.search).toBe('');
+    const cid = room(createCommittee(), null);
+    window.history.replaceState(null, '', `/?c=${cid}`);
+    render(<CommitteeProvider cid={cid}><Probe /></CommitteeProvider>);
+    await user.click(screen.getByText('share'));
+    const r = getEntry(cid)?.roomId;
+    expect(r).toMatch(/^mun-/);
+    expect(window.location.search).toBe(`?c=${cid}&room=${r}`);
+    await user.click(screen.getByText('stop'));
+    expect(getEntry(cid)?.roomId).toBeNull();
+    expect(window.location.search).toBe(`?c=${cid}`);
+  });
+
+  it('keeps two committees in separate rooms', () => {
+    const a = room(withDelegate('A'), 'room-a');
+    const b = room(withDelegate('B'), 'room-b');
+    expect(getEntry(a)?.roomId).toBe('room-a');
+    expect(getEntry(b)?.roomId).toBe('room-b');
     expect(FakeMap).toBeDefined();
   });
 });

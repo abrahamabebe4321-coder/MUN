@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useState } from 'react'
 import type { ChangeEvent } from 'react'
 import { useCommittee } from '../state/CommitteeContext'
-import { createCommittee } from '../state/state'
+import { createEntry } from '../state/library'
 import { exportJson, importJson } from '../state/storage'
 import type { CommitteeState } from '../state/state'
 import { DEFAULT_SCORING, CATEGORY_LABELS, KIND_LABELS, TIER_LABELS, categoryOf, scoreInteraction } from '../domain/scoring'
@@ -59,11 +59,10 @@ function slug(s: string): string {
 }
 
 export function SettingsPanel() {
-  const { state, dispatch } = useCommittee()
+  const { state, dispatch, switchTo } = useCommittee()
   const [theme, setThemeState] = useState<ThemeChoice>(() => getTheme())
   const [pending, setPending] = useState<CommitteeState | null>(null)
   const [importError, setImportError] = useState(false)
-  const [confirmNew, setConfirmNew] = useState(false)
   const sc = state.scoring
 
   const setScoring = (next: ScoringConfig) => dispatch({ type: 'scoring/set', scoring: next })
@@ -196,6 +195,16 @@ export function SettingsPanel() {
       </div>
 
       <div className="settings-section">
+        <h3>New committee</h3>
+        <div className="settings-row">
+          <Button onClick={() => switchTo(createEntry())}>New committee</Button>
+          <p className="settings-muted">
+            Start a separate committee. This one stays saved under More → Committees.
+          </p>
+        </div>
+      </div>
+
+      <div className="settings-section">
         <h3>Backup</h3>
         <div className="settings-row">
           <Button onClick={download}>Download backup</Button>
@@ -209,11 +218,6 @@ export function SettingsPanel() {
             That file is not a valid MUN Chair backup.
           </p>
         ) : null}
-        <div>
-          <Button variant="danger" onClick={() => setConfirmNew(true)}>
-            Start a new committee
-          </Button>
-        </div>
       </div>
 
       {pending ? (
@@ -224,44 +228,21 @@ export function SettingsPanel() {
             <>
               <Button onClick={() => setPending(null)}>Cancel</Button>
               <Button
-                variant="danger"
-                className="btn-solid"
+                variant="primary"
                 onClick={() => {
-                  dispatch({ type: 'state/replace', state: pending })
+                  const id = createEntry({ state: pending })
                   setPending(null)
+                  switchTo(id)
                 }}
               >
-                Replace
+                Restore
               </Button>
             </>
           }
         >
           <p>
-            Replace the current committee with the backup “{pending.name}”? This cannot be undone.
+            Restore the backup “{pending.name}” as a new committee? This committee stays saved.
           </p>
-        </Modal>
-      ) : null}
-      {confirmNew ? (
-        <Modal
-          title="Start a new committee"
-          onClose={() => setConfirmNew(false)}
-          footer={
-            <>
-              <Button onClick={() => setConfirmNew(false)}>Cancel</Button>
-              <Button
-                variant="danger"
-                className="btn-solid"
-                onClick={() => {
-                  dispatch({ type: 'state/replace', state: createCommittee() })
-                  setConfirmNew(false)
-                }}
-              >
-                Erase and start new
-              </Button>
-            </>
-          }
-        >
-          <p>Erase this committee and start a new one? Download a backup first if you want to keep it.</p>
         </Modal>
       ) : null}
     </section>

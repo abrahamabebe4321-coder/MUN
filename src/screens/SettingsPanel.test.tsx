@@ -5,10 +5,12 @@ import { CommitteeProvider, useCommittee } from '../state/CommitteeContext'
 import { createCommittee } from '../state/state'
 import type { CommitteeState } from '../state/state'
 import { exportJson } from '../state/storage'
+import { listCommittees } from '../state/library'
 import { DEFAULT_SCORING } from '../domain/scoring'
 import { SettingsPanel } from './SettingsPanel'
 
 let current: CommitteeState
+const switched = vi.fn()
 function Probe() {
   current = useCommittee().state
   return null
@@ -32,7 +34,7 @@ function makeState(): CommitteeState {
 function setup(state = makeState()) {
   const user = userEvent.setup()
   render(
-    <CommitteeProvider initial={state}>
+    <CommitteeProvider initial={state} onSwitch={switched}>
       <SettingsPanel />
       <Probe />
     </CommitteeProvider>,
@@ -45,6 +47,7 @@ const row = (label: string) => screen.getByText(label).closest('tr') as HTMLElem
 describe('SettingsPanel', () => {
   beforeEach(() => {
     localStorage.clear()
+    switched.mockClear()
     document.documentElement.removeAttribute('data-theme')
   })
 
@@ -145,17 +148,23 @@ describe('SettingsPanel', () => {
     expect(revoke).toHaveBeenCalledWith('blob:x')
   })
 
-  it('restores a valid backup after confirming', async () => {
+  it('restores a backup into a new committee without touching this one', async () => {
     const { user } = setup()
     const other = createCommittee()
     other.name = 'Other'
     other.stage = 'running'
     const file = new File([exportJson(other)], 'b.json', { type: 'application/json' })
+    const before = listCommittees().length
     await user.upload(screen.getByLabelText('Restore from backup'), file)
-    expect(await screen.findByText(/Replace the current committee with the backup “Other”\?/)).toBeInTheDocument()
+    expect(await screen.findByText(/Restore the backup “Other” as a new committee\?/)).toBeInTheDocument()
     expect(current.name).toBe('Test Cmte')
-    await user.click(screen.getByRole('button', { name: 'Replace' }))
-    expect(current.name).toBe('Other')
+    await user.click(screen.getByRole('button', { name: 'Restore' }))
+    expect(current.name).toBe('Test Cmte')
+    const list = listCommittees()
+    expect(list).toHaveLength(before + 1)
+    const made = list.find((e) => e.name === 'Other')
+    expect(made).toBeDefined()
+    expect(switched).toHaveBeenCalledWith(made!.id)
   })
 
   it('shows an alert for an invalid file', async () => {
@@ -166,11 +175,12 @@ describe('SettingsPanel', () => {
     expect(current.name).toBe('Test Cmte')
   })
 
-  it('Start a new committee resets after confirm', async () => {
+  it('New committee creates and switches without erasing this one', async () => {
     const { user } = setup()
-    await user.click(screen.getByRole('button', { name: 'Start a new committee' }))
-    await user.click(screen.getByRole('button', { name: 'Erase and start new' }))
-    expect(current.stage).toBe('setup')
-    expect(current.delegates).toHaveLength(0)
+    const before = listCommittees().length
+    await user.click(screen.getByRole('button', { name: 'New committee' }))
+    expect(current.delegates).toHaveLength(2)
+    expect(listCommittees()).toHaveLength(before + 1)
+    expect(switched).toHaveBeenCalledTimes(1)
   })
 })

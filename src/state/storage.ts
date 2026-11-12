@@ -1,13 +1,23 @@
 import type { CommitteeState } from './state';
 
-export const STORAGE_KEY = 'mun-chair:committee:v1';
+/** Pre-library single-committee key; only read by the migration. */
+export const LEGACY_STATE_KEY = 'mun-chair:committee:v1';
+/** Pre-library global room key; only read by the migration. */
+export const LEGACY_ROOM_KEY = 'mun-chair:room';
+export const INDEX_KEY = 'mun-chair:committees:v1';
+export const ACTIVE_KEY = 'mun-chair:active';
+
+export function committeeKey(cid: string): string {
+  return `mun-chair:committee:${cid}`;
+}
 
 export function saveState(
+  cid: string,
   state: CommitteeState,
   storage: Pick<Storage, 'setItem'> = localStorage,
 ): void {
   try {
-    storage.setItem(STORAGE_KEY, JSON.stringify(state));
+    storage.setItem(committeeKey(cid), JSON.stringify(state));
   } catch {
     // storage unavailable or full; ignore
   }
@@ -37,10 +47,11 @@ export function parseState(value: unknown): CommitteeState | null {
 }
 
 export function loadState(
+  cid: string,
   storage: Pick<Storage, 'getItem'> = localStorage,
 ): CommitteeState | null {
   try {
-    const raw = storage.getItem(STORAGE_KEY);
+    const raw = storage.getItem(committeeKey(cid));
     if (raw === null) return null;
     return parseState(JSON.parse(raw));
   } catch {

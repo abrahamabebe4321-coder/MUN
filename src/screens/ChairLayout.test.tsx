@@ -164,9 +164,17 @@ describe('ChairLayout', () => {
     const user = setup();
     await user.click(screen.getByRole('button', { name: 'Projector' }));
     expect(open).toHaveBeenCalledTimes(1);
-    expect(String(open.mock.calls[0][0])).toMatch(/#\/projector$/);
+    expect(String(open.mock.calls[0][0])).toMatch(/\?c=c-[a-z0-9]{8}#\/projector$/);
     expect(open.mock.calls[0][1]).toBe('mun-projector');
     open.mockRestore();
+  });
+
+  it('More has Committees… first and opens the dialog', async () => {
+    const user = setup();
+    await user.click(screen.getByRole('button', { name: 'More' }));
+    expect(screen.getAllByRole('menuitem')[0]).toHaveTextContent('Committees…');
+    await user.click(screen.getByRole('menuitem', { name: 'Committees…' }));
+    expect(screen.getByRole('dialog', { name: 'Committees' })).toBeInTheDocument();
   });
 
   it('Projector moves the window to the second display', async () => {

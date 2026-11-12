@@ -4,10 +4,10 @@ import type { Action } from './reducer';
 import { createHistory, historyReducer } from './history';
 import { createCommittee } from './state';
 import type { CommitteeState } from './state';
-import { JoinModal } from '../sync/JoinModal';
 import { useLiveSync } from '../sync/useLiveSync';
 import type { SyncApi } from '../sync/useLiveSync';
-import { loadState, saveState, STORAGE_KEY } from './storage';
+import { committeeKey, loadState } from './storage';
+import { createEntry, lastActive, loadCommittee, saveCommittee } from './library';
 
 interface CommitteeContextValue {
   state: CommitteeState;
@@ -17,6 +17,10 @@ interface CommitteeContextValue {
   canUndo: boolean;
   canRedo: boolean;
   sync: SyncApi;
+  /** Id of the local committee this provider shows. */
+  cid: string;
+  /** Show another local committee in this tab (no-op when the provider has no switcher). */
+  switchTo: (cid: string) => void;
 }
 
 const CommitteeContext = createContext<CommitteeContextValue | null>(null);
@@ -24,17 +28,25 @@ const CommitteeContext = createContext<CommitteeContextValue | null>(null);
 export function CommitteeProvider({
   children,
   initial,
+  cid: cidProp,
+  onSwitch,
 }: {
   children: ReactNode;
   initial?: CommitteeState;
+  /** Local committee to show; omitted only in tests (an ephemeral committee is created). */
+  cid?: string;
+  onSwitch?: (cid: string) => void;
 }) {
+  const [cid] = useState(() => cidProp ?? createEntry({ state: initial }));
   const [history, dispatchHistory] = useReducer(historyReducer, undefined, () =>
-    createHistory(initial ?? loadState() ?? createCommittee()),
+    createHistory(initial ?? loadCommittee(cid) ?? createCommittee()),
   );
 
   useEffect(() => {
-    saveState(history.present);
-  }, [history.present]);
+    saveCommittee(cid, history.present);
+  }, [cid, history.present]);
+
+  const switchTo = useCallback((next: string) => onSwitch?.(next), [onSwitch]);
 
   const dispatch = useCallback((a: Action) => dispatchHistory(a), []);
   const dispatchRemote = useCallback(
@@ -42,7 +54,7 @@ export function CommitteeProvider({
     [],
   );
   const dispatchTag = useCallback((tag: string) => dispatchHistory({ type: 'sync/tag', tag }), []);
-  const sync = useLiveSync(history.present, dispatchRemote, dispatchTag);
+  const sync = useLiveSync(cid, history.present, dispatchRemote, dispatchTag);
   const undo = useCallback(() => dispatchHistory({ type: 'undo' }), []);
   const redo = useCallback(() => dispatchHistory({ type: 'redo' }), []);
 
@@ -55,16 +67,15 @@ export function CommitteeProvider({
       canUndo: history.past.length > 0,
       canRedo: history.future.length > 0,
       sync,
+      cid,
+      switchTo,
     }),
-    [history, dispatch, undo, redo, sync],
+    [history, dispatch, undo, redo, sync, cid, switchTo],
   );
 
   return (
     <CommitteeContext.Provider value={value}>
       {children}
-      {sync.pendingJoin && (
-        <JoinModal name={sync.pendingJoin.name} onJoin={sync.confirmJoin} onCancel={sync.cancelJoin} />
-      )}
     </CommitteeContext.Provider>
   );
 }
@@ -75,15 +86,27 @@ export function useCommittee(): CommitteeContextValue {
   return ctx;
 }
 
-/** Read-only view of the persisted committee, for a second window (projector). */
-export function useStoredCommittee(): CommitteeState | null {
-  const [stored, setStored] = useState<CommitteeState | null>(() => loadState());
+/** The committee a projector window shows: `?c=` from its URL, else the last active one. */
+export function projectorCid(): string | null {
+  try {
+    return new URLSearchParams(window.location.search).get('c') ?? lastActive();
+  } catch {
+    return null;
+  }
+}
+
+/** Read-only view of a persisted committee, for a second window (projector). */
+export function useStoredCommittee(cid: string | null = projectorCid()): CommitteeState | null {
+  const [stored, setStored] = useState<CommitteeState | null>(() => (cid ? loadState(cid) : null));
   useEffect(() => {
+    if (!cid) return;
+    setStored(loadState(cid));
+    const key = committeeKey(cid);
     const onStorage = (e: StorageEvent) => {
-      if (e.key === STORAGE_KEY || e.key === null) setStored(loadState());
+      if (e.key === key || e.key === null) setStored(loadState(cid));
     };
     window.addEventListener('storage', onStorage);
     return () => window.removeEventListener('storage', onStorage);
-  }, []);
+  }, [cid]);
   return stored;
 }

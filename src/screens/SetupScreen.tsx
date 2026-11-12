@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { CommitteesDialog } from './CommitteesDialog'
+import { listCommittees } from '../state/library'
 import type { KeyboardEvent } from 'react'
 import { Button } from '../components/ui/Button'
 import { DelegateChip } from '../components/ui/DelegateChip'
@@ -16,7 +18,9 @@ const norm = (s: string) =>
     .trim()
 
 export function SetupScreen() {
-  const { state, dispatch } = useCommittee()
+  const { state, dispatch, cid } = useCommittee()
+  const [switcher, setSwitcher] = useState(false)
+  const [hasOthers] = useState(() => listCommittees().some((e) => e.id !== cid))
   const [query, setQuery] = useState('')
   const [custom, setCustom] = useState('')
   const [pasted, setPasted] = useState('')
@@ -80,6 +84,14 @@ export function SetupScreen() {
   return (
     <main className="setup">
       <h1>Set up your committee</h1>
+      {hasOthers && (
+        <p className="setup-switch">
+          <Button variant="ghost" size="sm" onClick={() => setSwitcher(true)}>
+            Open another committee
+          </Button>
+        </p>
+      )}
+      {switcher && <CommitteesDialog onClose={() => setSwitcher(false)} />}
       <p className="muted setup-lede">Name the committee, add the delegations, then start.</p>
       <div className="setup-fields">
         <div className="field">

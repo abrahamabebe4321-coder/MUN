@@ -1,8 +1,9 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { CommitteeProvider, useCommittee } from '../state/CommitteeContext'
 import { createCommittee } from '../state/state'
+import { createEntry } from '../state/library'
 import { SetupScreen } from './SetupScreen'
 
 function Probe() {
@@ -122,5 +123,15 @@ describe('SetupScreen', () => {
     expect(start).toBeEnabled()
     await user.click(start)
     expect(probe().stage).toBe('running')
+  })
+  it('offers Open another committee only when others exist', async () => {
+    const user = setup()
+    expect(screen.queryByRole('button', { name: 'Open another committee' })).toBeNull()
+    cleanup()
+    createEntry()
+    const again = setup()
+    await again.click(screen.getByRole('button', { name: 'Open another committee' }))
+    expect(screen.getByRole('dialog', { name: 'Committees' })).toBeInTheDocument()
+    void user
   })
 })
