@@ -6,6 +6,7 @@ import type { CommitteeState } from '../state/state';
 import { reducer } from '../state/reducer';
 import type { Action } from '../state/reducer';
 import { saveState, STORAGE_KEY } from '../state/storage';
+import { THEME_KEY } from '../theme';
 
 const T0 = new Date('2026-01-01T12:00:00Z').getTime();
 
@@ -39,10 +40,23 @@ beforeEach(() => {
   vi.setSystemTime(T0);
 });
 afterEach(() => {
+  document.documentElement.removeAttribute('data-theme');
+  localStorage.clear();
   vi.useRealTimers();
 });
 
 describe('ProjectorView', () => {
+  it('applies the stored theme and follows storage changes', () => {
+    localStorage.setItem(THEME_KEY, 'dark');
+    render(<ProjectorView />);
+    expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
+    localStorage.setItem(THEME_KEY, 'light');
+    act(() => {
+      window.dispatchEvent(new StorageEvent('storage', { key: THEME_KEY, newValue: 'light' }));
+    });
+    expect(document.documentElement.getAttribute('data-theme')).toBe('light');
+  });
+
   it('waits when nothing is stored', () => {
     render(<ProjectorView />);
     expect(screen.getByText('Waiting for the chair to start the committee…')).toBeInTheDocument();

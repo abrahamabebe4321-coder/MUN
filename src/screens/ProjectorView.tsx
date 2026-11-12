@@ -5,6 +5,7 @@ import { useNow } from '../hooks/useNow';
 import { describeMotion, orderMotions } from '../domain/motions';
 import { TimerDisplay } from '../components/ui/TimerDisplay';
 import { Flag } from '../components/Flag';
+import { applyStoredTheme, THEME_KEY } from '../theme';
 import './projector.css';
 
 const MODE_LABELS = {
@@ -172,6 +173,14 @@ function Content({ state, now }: { state: CommitteeState; now: number }) {
 export function ProjectorView() {
   const state = useStoredCommittee();
   const now = useNow(true, 250);
+  useEffect(() => {
+    applyStoredTheme();
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === THEME_KEY || e.key === null) applyStoredTheme();
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
   return (
     <main className="projector">
       <h1 className="sr-only">Projector view</h1>
