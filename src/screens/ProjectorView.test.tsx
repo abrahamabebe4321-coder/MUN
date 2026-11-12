@@ -93,8 +93,7 @@ describe('ProjectorView', () => {
     expect(screen.getByText('Dams')).toBeInTheDocument();
     expect(screen.getByText('France')).toBeInTheDocument();
     expect(screen.getByText('1:00')).toBeInTheDocument();
-    expect(screen.getByText('10:00')).toBeInTheDocument();
-    expect(screen.getByText('Caucus time')).toBeInTheDocument();
+    expect(screen.queryByText('Caucus time')).toBeNull();
     const items = screen.getAllByRole('listitem').map((li) => li.textContent);
     expect(items).toEqual(['Germany', 'Japan', 'Brazil', 'India', 'Korea', 'Mexico']);
     expect(screen.getByText('+1 more')).toBeInTheDocument();
@@ -218,5 +217,57 @@ describe('ProjectorView POIs', () => {
     });
     expect(screen.getByRole('button', { name: 'Exit fullscreen' })).toBeInTheDocument();
     Object.defineProperty(document, 'fullscreenElement', { value: null, configurable: true });
+  });
+  const flush = async () => {
+    await act(async () => {
+      for (let k = 0; k < 6; k++) await Promise.resolve();
+    });
+  };
+  const setFullscreenEl = (el: Element | null) => {
+    Object.defineProperty(document, 'fullscreenElement', { value: el, configurable: true });
+    act(() => {
+      document.dispatchEvent(new Event('fullscreenchange'));
+    });
+  };
+
+  it('requests plain fullscreen synchronously on click and shows the Esc note', async () => {
+    saveState(running());
+    const req = vi.fn().mockResolvedValue(undefined);
+    document.documentElement.requestFullscreen = req;
+    render(<ProjectorView />);
+    await flush();
+    const btn = screen.getByRole('button', { name: 'Fullscreen' });
+    expect(btn).toHaveAttribute('title', 'Press Esc to leave fullscreen');
+    btn.click();
+    expect(req).toHaveBeenCalledTimes(1);
+    expect(req).toHaveBeenCalledWith();
+    setFullscreenEl(document.body);
+    expect(screen.getByRole('status')).toHaveTextContent('Press Esc to leave fullscreen');
+    setFullscreenEl(null);
+  });
+
+  it('passes the prefetched projector screen to requestFullscreen', async () => {
+    saveState(running());
+    const a = { availLeft: 0, availTop: 0, availWidth: 1, availHeight: 1, isPrimary: true, label: 'a' };
+    const b = { availLeft: 5, availTop: 0, availWidth: 1, availHeight: 1, isPrimary: false, label: 'b' };
+    (window as any).getScreenDetails = async () => ({ screens: [a, b], currentScreen: a }); // eslint-disable-line @typescript-eslint/no-explicit-any
+    const req = vi.fn().mockResolvedValue(undefined);
+    document.documentElement.requestFullscreen = req;
+    render(<ProjectorView />);
+    await flush();
+    screen.getByRole('button', { name: 'Fullscreen' }).click();
+    expect(req).toHaveBeenCalledWith({ screen: b });
+    delete (window as any).getScreenDetails; // eslint-disable-line @typescript-eslint/no-explicit-any
+  });
+
+  it('shows a blocked message when fullscreen fails', async () => {
+    saveState(running());
+    const req = vi.fn().mockRejectedValue(new Error('no'));
+    document.documentElement.requestFullscreen = req;
+    render(<ProjectorView />);
+    await flush();
+    screen.getByRole('button', { name: 'Fullscreen' }).click();
+    await flush();
+    expect(screen.getByRole('status')).toHaveTextContent('Fullscreen was blocked. Click Fullscreen again.');
   });
 });

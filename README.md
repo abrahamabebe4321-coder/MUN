@@ -24,7 +24,9 @@ MUN Chair is a tool for chairing one Model UN committee. It helps you time debat
 
 Download `MUN-Chair.html` from the repository (on GitHub, open the file and use the download button). Save it anywhere and double-click it to open it in Chrome or Edge. It works with no internet.
 
-To show the projector view, use the Projector button, drag that window to the projector screen, then click Fullscreen.
+To show the projector view, use the Projector button, then click Fullscreen.
+
+With the projector connected as a second display (Windows: Win+P, then Extend; Mac: System Settings, Displays, arrange rather than mirror), clicking Projector opens the projector window on that display. Chrome and Edge may ask once to allow "window management"; choose Allow. Fullscreen then fills only the projector display, so the laptop screen stays free for the dashboard. If the displays are mirrored, fullscreen covers both screens; press Esc to leave it.
 
 Keep using the same file on the same laptop: your committee is saved in that browser. Use More -> Settings -> Download backup before switching laptops.
 
@@ -58,7 +60,7 @@ The chair screen has four tabs: Debate, Motions, Resolutions and Scores. Roll ca
 
 1. Set up the committee and its delegations.
 2. Take roll call from the "More" menu (or click the attendance count). For each new session, choose "Next session" in the "More" menu.
-3. Open the projector window and move it to the projector screen.
+3. Open the projector window (see the projector notes above) and put it on the projector screen.
 4. Run opening speeches from the Debate tab.
 5. Log motions on the Motions tab and vote on them in the order shown. A passed caucus starts automatically.
 6. During speeches, rate each one by clicking one to three pips, and log POIs. Rarely used timer controls are under "Adjust".

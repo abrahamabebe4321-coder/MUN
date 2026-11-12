@@ -1,10 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useStoredCommittee } from '../state/CommitteeContext';
 import type { CommitteeState } from '../state/state';
 import { useNow } from '../hooks/useNow';
 import { describeMotion, orderMotions } from '../domain/motions';
 import { TimerDisplay } from '../components/ui/TimerDisplay';
 import { Flag } from '../components/Flag';
+import { getProjectorScreen } from '../projectorScreen';
+import type { ScreenDetailed } from '../projectorScreen';
 import { applyStoredTheme, THEME_KEY } from '../theme';
 import './projector.css';
 
@@ -22,29 +24,71 @@ const MAX_POIS = 6;
 const MAX_MOTIONS = 4;
 const VOTE_BANNER_MS = 30_000;
 
-function toggleFullscreen() {
-  try {
-    if (document.fullscreenElement) {
-      void document.exitFullscreen?.()?.catch?.(() => {});
-    } else {
-      void document.documentElement.requestFullscreen?.()?.catch?.(() => {});
-    }
-  } catch {
-    // fullscreen unavailable
-  }
-}
+const NOTE_MS = 4000;
+const FS_HINT = 'Press Esc to leave fullscreen';
+
+const BLOCKED_MSG = 'Fullscreen was blocked. Click Fullscreen again.';
 
 function FullscreenButton() {
   const [full, setFull] = useState(() => typeof document !== 'undefined' && !!document.fullscreenElement);
+  const [message, setMessage] = useState<string | null>(null);
+  const screenRef = useRef<ScreenDetailed | null>(null);
+  useEffect(() => {
+    let alive = true;
+    void getProjectorScreen().then((s) => {
+      if (alive) screenRef.current = s;
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
   useEffect(() => {
     const onChange = () => setFull(!!document.fullscreenElement);
     document.addEventListener('fullscreenchange', onChange);
     return () => document.removeEventListener('fullscreenchange', onChange);
   }, []);
+  useEffect(() => {
+    if (full) setMessage(FS_HINT);
+    else setMessage((m) => (m === FS_HINT ? null : m));
+  }, [full]);
+  useEffect(() => {
+    if (!message) return;
+    const t = setTimeout(() => setMessage(null), NOTE_MS);
+    return () => clearTimeout(t);
+  }, [message]);
+
+  // Must stay synchronous up to requestFullscreen to keep the user activation.
+  const toggle = () => {
+    try {
+      if (document.fullscreenElement) {
+        void document.exitFullscreen?.()?.catch?.(() => {});
+        return;
+      }
+      const root = document.documentElement;
+      const s = screenRef.current;
+      const first = s
+        ? root.requestFullscreen({ screen: s } as unknown as FullscreenOptions)
+        : root.requestFullscreen();
+      Promise.resolve(first).catch(() => {
+        if (!s) throw new Error('blocked');
+        return root.requestFullscreen();
+      }).catch(() => setMessage(BLOCKED_MSG));
+    } catch {
+      setMessage(BLOCKED_MSG);
+    }
+  };
+
   return (
-    <button type="button" className="proj-fullscreen" onClick={toggleFullscreen}>
-      {full ? 'Exit fullscreen' : 'Fullscreen'}
-    </button>
+    <>
+      <button type="button" className="proj-fullscreen" title={FS_HINT} onClick={toggle}>
+        {full ? 'Exit fullscreen' : 'Fullscreen'}
+      </button>
+      {message && (
+        <div role="status" className="proj-fs-note">
+          {message}
+        </div>
+      )}
+    </>
   );
 }
 
@@ -110,9 +154,6 @@ function Content({ state, now }: { state: CommitteeState; now: number }) {
               <div className="proj-none">No speaker</div>
             )}
             <TimerDisplay timer={debate.speechTimer} now={now} size="xl" label="Speaking time" />
-            {debate.caucusTimer && (
-              <TimerDisplay timer={debate.caucusTimer} now={now} size="md" label="Caucus time" />
-            )}
             {shownPois.length > 0 && (
               <div className="proj-pois">
                 <span className="proj-pois-title">Points of information</span>

@@ -150,9 +150,6 @@
 .proj-main .timer { gap: 0.8vh; }
 .proj-main .timer-label { font-size: clamp(0.9rem, 2.4vh, 1.6rem); }
 .proj-main .timer-xl .timer-time { font-size: clamp(4rem, 28vh, 17rem); }
-.proj-main .timer-md { flex-direction: row; align-items: baseline; gap: 1.5vw; }
-.proj-main .timer-md .timer-time { font-size: clamp(1.5rem, 6vh, 4rem); }
-.proj-main .timer-md .timer-bar { display: none; }
 .proj-side {
   min-height: 0;
   overflow: hidden;
@@ -202,3 +199,26 @@
 .proj-vote.is-passed .proj-vote-result { color: var(--success); }
 .proj-vote.is-failed .proj-vote-result { color: var(--danger); }
 .proj-vote-counts { color: var(--text-muted); }
+
+.proj-fs-note {
+  position: fixed;
+  bottom: 1.25rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 3;
+  padding: 0.4rem 1rem;
+  border-radius: 999px;
+  background: var(--scrim);
+  color: var(--text);
+  border: 1px solid var(--border);
+  font-size: 1rem;
+  pointer-events: none;
+  animation: proj-fs-fade 4s ease-in forwards;
+}
+@keyframes proj-fs-fade {
+  0%, 70% { opacity: 1; }
+  100% { opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .proj-fs-note { animation: none; }
+}

@@ -4,6 +4,7 @@ import { Menu } from '../components/ui/Menu';
 import { Modal } from '../components/ui/Modal';
 import { quorum } from '../domain/voting';
 import { useCommittee } from '../state/CommitteeContext';
+import { getProjectorScreen, popupFeatures } from '../projectorScreen';
 import { NavContext } from './nav';
 import { TABS } from './tabs';
 import type { TabId } from './tabs';
@@ -71,9 +72,24 @@ export function ChairLayout() {
             <Button size="sm" disabled={!canUndo} title="Undo (Ctrl+Z)" onClick={undo}>Undo</Button>
             <Button
               size="sm"
-              onClick={() =>
-                window.open(`${window.location.pathname}#/projector`, 'mun-projector', 'popup,width=1280,height=720')
-              }
+              onClick={() => {
+                // open synchronously (user activation), then move to the projector display
+                const win = window.open(
+                  `${window.location.pathname}#/projector`,
+                  'mun-projector',
+                  popupFeatures(null),
+                );
+                void getProjectorScreen().then((s) => {
+                  if (s && win && !win.closed) {
+                    try {
+                      win.moveTo(s.availLeft, s.availTop);
+                      win.resizeTo(s.availWidth, s.availHeight);
+                    } catch {
+                      // not permitted
+                    }
+                  }
+                });
+              }}
             >
               Projector
             </Button>

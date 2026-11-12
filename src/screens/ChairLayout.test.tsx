@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, within, fireEvent } from '@testing-library/react';
+import { render, screen, within, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { CommitteeProvider } from '../state/CommitteeContext';
 import { createCommittee } from '../state/state';
@@ -165,6 +165,22 @@ describe('ChairLayout', () => {
     await user.click(screen.getByRole('button', { name: 'Projector' }));
     expect(open).toHaveBeenCalledTimes(1);
     expect(String(open.mock.calls[0][0])).toMatch(/#\/projector$/);
+    expect(open.mock.calls[0][1]).toBe('mun-projector');
+    open.mockRestore();
+  });
+
+  it('Projector moves the window to the second display', async () => {
+    const win = { closed: false, moveTo: vi.fn(), resizeTo: vi.fn() };
+    const open = vi.spyOn(window, 'open').mockImplementation(() => win as unknown as Window);
+    const a = { availLeft: 0, availTop: 0, availWidth: 1440, availHeight: 900, isPrimary: true, label: 'a' };
+    const b = { availLeft: 1440, availTop: 20, availWidth: 1920, availHeight: 1060, isPrimary: false, label: 'b' };
+    (window as any).getScreenDetails = async () => ({ screens: [a, b], currentScreen: a }); // eslint-disable-line @typescript-eslint/no-explicit-any
+    const user = setup();
+    await user.click(screen.getByRole('button', { name: 'Projector' }));
+    expect(open).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(win.moveTo).toHaveBeenCalledWith(1440, 20));
+    expect(win.resizeTo).toHaveBeenCalledWith(1920, 1060);
+    delete (window as any).getScreenDetails; // eslint-disable-line @typescript-eslint/no-explicit-any
     open.mockRestore();
   });
 });
