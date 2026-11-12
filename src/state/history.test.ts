@@ -59,6 +59,42 @@ describe('history', () => {
     expect(h).toEqual({ past: [], present: other, future: [] });
   });
 
+  it('sync/remote adopts the remote state, keeps the local tag and clears undo', () => {
+    let h = run(
+      createHistory({ ...createCommittee(), clientTag: 'mine' }),
+      { type: 'committee/update', name: 'A' },
+      { type: 'committee/update', name: 'B' },
+      { type: 'undo' },
+    );
+    const remote = { ...createCommittee(), name: 'Remote', clientTag: 'theirs' };
+    h = run(h, { type: 'sync/remote', state: remote });
+    expect(h.past).toEqual([]);
+    expect(h.future).toEqual([]);
+    expect(h.present.name).toBe('Remote');
+    expect(h.present.clientTag).toBe('mine');
+  });
+
+  it('sync/remote without a local tag takes the state as is', () => {
+    const remote = { ...createCommittee(), name: 'Remote' };
+    expect(run(h0(), { type: 'sync/remote', state: remote }).present).toBe(remote);
+  });
+
+  it('state/replace keeps the local tag', () => {
+    const h = run(createHistory({ ...createCommittee(), clientTag: 'mine' }), { type: 'state/replace', state: createCommittee() });
+    expect(h.present.clientTag).toBe('mine');
+  });
+
+  it('sync/tag sets the tag without touching undo, and undo keeps it', () => {
+    let h = run(h0(), { type: 'committee/update', name: 'A' }, { type: 'sync/tag', tag: 'zz9' });
+    expect(h.present.clientTag).toBe('zz9');
+    expect(h.past).toHaveLength(1);
+    h = run(h, { type: 'undo' });
+    expect(h.present.name).toBe('');
+    expect(h.present.clientTag).toBe('zz9');
+    h = run(h, { type: 'redo' });
+    expect(h.present.clientTag).toBe('zz9');
+  });
+
   describe('undo keeps live timers', () => {
     const setup = () =>
       run(

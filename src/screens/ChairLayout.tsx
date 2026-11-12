@@ -5,6 +5,7 @@ import { Modal } from '../components/ui/Modal';
 import { quorum } from '../domain/voting';
 import { useCommittee } from '../state/CommitteeContext';
 import { getProjectorScreen, popupFeatures } from '../projectorScreen';
+import { ShareDialog, statusLabel } from '../sync/ShareDialog';
 import { NavContext } from './nav';
 import { TABS } from './tabs';
 import type { TabId } from './tabs';
@@ -17,7 +18,9 @@ function isEditable(t: EventTarget | null): boolean {
 }
 
 export function ChairLayout() {
-  const { state, dispatch, undo, redo, canUndo, canRedo } = useCommittee();
+  const { state, dispatch, undo, redo, canUndo, canRedo, sync } = useCommittee();
+  const [sharing, setSharing] = useState(false);
+  const live = statusLabel(sync);
   const q = quorum(state.delegates);
   const [tab, setTab] = useState<TabId>(() => (q.present === 0 ? 'rollcall' : 'debate'));
   const [confirm, setConfirm] = useState<null | 'next' | 'end'>(null);
@@ -93,6 +96,13 @@ export function ChairLayout() {
             >
               Projector
             </Button>
+            <Button size="sm" onClick={() => setSharing(true)}>Share</Button>
+            {live && (
+              <span className={`chair-sync chair-sync-${sync.status}`} role="status">
+                <span className="chair-sync-dot" aria-hidden="true" />
+                {live}
+              </span>
+            )}
             <Menu
               label="More"
               align="right"
@@ -143,6 +153,7 @@ export function ChairLayout() {
         <NavContext.Provider value={navigate}>{active.render()}</NavContext.Provider>
       </div>
 
+      {sharing && <ShareDialog sync={sync} onClose={() => setSharing(false)} />}
       {confirm === 'next' && (
         <Modal
           title="Next session"

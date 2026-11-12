@@ -103,7 +103,12 @@ export type Action =
 
 /** The id the next minting action will receive for the given prefix. */
 export function peekId(state: CommitteeState, prefix: string): string {
-  return `${prefix}${state.nextId}`;
+  return `${prefix}${state.nextId}${tagSuffix(state)}`;
+}
+
+/** Suffix that keeps ids unique across co-chairs sharing a committee. */
+function tagSuffix(state: CommitteeState): string {
+  return state.clientTag ? `-${state.clientTag}` : '';
 }
 
 const hasDelegate = (s: CommitteeState, id: string) => s.delegates.some((d) => d.id === id);
@@ -154,7 +159,7 @@ function changeSpeaker(state: CommitteeState, nextSpeakerId: string | null): Com
   if (nextSpeakerId === null) return { ...state, debate: { ...debate, speechRef: null } };
   return {
     ...state,
-    debate: { ...debate, speechRef: `s${state.nextId}` },
+    debate: { ...debate, speechRef: peekId(state, 's') },
     nextId: state.nextId + 1,
   };
 }
@@ -185,7 +190,7 @@ export function reducer(state: CommitteeState, action: Action): CommitteeState {
       };
 
     case 'delegate/add': {
-      const id = action.id ?? `custom-${state.nextId}`;
+      const id = action.id ?? peekId(state, 'custom-');
       if (hasDelegate(state, id)) return state;
       const delegates = [
         ...state.delegates,
@@ -242,7 +247,7 @@ export function reducer(state: CommitteeState, action: Action): CommitteeState {
     case 'interaction/add': {
       if (!hasDelegate(state, action.delegateId)) return state;
       const interaction: Interaction = {
-        id: `i${state.nextId}`,
+        id: peekId(state, 'i'),
         delegateId: action.delegateId,
         kind: action.kind,
         tier: action.tier,
@@ -287,7 +292,7 @@ export function reducer(state: CommitteeState, action: Action): CommitteeState {
         motions: [
           ...state.motions,
           {
-            id: `m${state.nextId}`,
+            id: peekId(state, 'm'),
             type: action.motionType,
             proposerId: action.proposerId,
             topic: action.topic ?? '',
@@ -337,7 +342,7 @@ export function reducer(state: CommitteeState, action: Action): CommitteeState {
         votes: [
           ...state.votes,
           {
-            id: `v${state.nextId}`,
+            id: peekId(state, 'v'),
             subject: action.subject,
             procedural: action.procedural,
             threshold: action.threshold,
@@ -496,7 +501,7 @@ export function reducer(state: CommitteeState, action: Action): CommitteeState {
         resolutions: [
           ...state.resolutions,
           {
-            id: `r${state.nextId}`,
+            id: peekId(state, 'r'),
             name: action.name,
             sponsorIds: action.sponsorIds ?? [],
             signatoryIds: action.signatoryIds ?? [],
@@ -544,7 +549,7 @@ export function reducer(state: CommitteeState, action: Action): CommitteeState {
       ) {
         return state;
       }
-      const id = `a${state.nextId}`;
+      const id = peekId(state, 'a');
       return {
         ...state,
         resolutions: state.resolutions.map((r) =>

@@ -67,3 +67,12 @@
   padding: var(--s5) var(--s5) 0;
 }
 .chair-back { margin: 0 0 var(--s3) calc(-1 * var(--s3)); }
+.chair-sync { display: inline-flex; align-items: center; gap: var(--s1); font-size: 13px; white-space: nowrap; color: var(--text-muted); }
+.chair-sync-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+.chair-sync-connected { color: var(--success); }
+.chair-sync-connecting, .chair-sync-reconnecting { color: var(--warning); }
+.chair-sync-error { color: var(--danger); }
+.share-row { display: flex; align-items: center; gap: var(--s2); flex-wrap: wrap; margin: var(--s3) 0; }
+.share-link { flex: 1 1 240px; min-width: 0; padding: var(--s2) var(--s3); border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--surface); color: var(--text); font: inherit; }
+.share-copied { font-size: 13px; color: var(--success); min-width: 48px; }
+.share-status { color: var(--text-muted); font-size: 13px; }

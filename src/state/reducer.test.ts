@@ -582,3 +582,34 @@ describe('proposer speaks last and POI queue', () => {
     expect(reducer(s, { type: 'speakers/setCurrent', id: 'd' }).debate.poiQueue).toEqual([]);
   });
 });
+
+describe('client tag in minted ids', () => {
+  const add = (s: CommitteeState) =>
+    run(
+      s,
+      { type: 'delegate/add', id: 'a', name: 'A', flag: null },
+      { type: 'interaction/add', delegateId: 'a', kind: 'gsl_speech', tier: 2, now: 5 },
+      { type: 'motion/add', motionType: 'gsl', proposerId: 'a' },
+    );
+
+  it('appends the tag when present', () => {
+    const s = add({ ...createCommittee(), clientTag: 'abc123' });
+    expect(s.interactions[0].id).toBe('i1-abc123');
+    expect(s.motions[0].id).toBe('m2-abc123');
+    expect(peekId(s, 'x')).toBe('x3-abc123');
+    const c = run({ ...createCommittee(), clientTag: 'abc123' }, { type: 'delegate/add', name: 'Custom', flag: null });
+    expect(c.delegates[0].id).toBe('custom-1-abc123');
+  });
+
+  it('leaves ids unchanged without a tag', () => {
+    const s = add(createCommittee());
+    expect(s.interactions[0].id).toBe('i1');
+    expect(s.motions[0].id).toBe('m2');
+    expect(peekId(s, 'x')).toBe('x3');
+  });
+
+  it('country delegate ids stay the ISO code', () => {
+    const s = run({ ...createCommittee(), clientTag: 'abc123' }, { type: 'delegate/add', id: 'ke', name: 'Kenya', flag: 'ke' });
+    expect(s.delegates[0].id).toBe('ke');
+  });
+});

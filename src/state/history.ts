@@ -8,7 +8,20 @@ export interface History {
   future: CommitteeState[];
 }
 
-export type HistoryAction = Action | { type: 'undo' } | { type: 'redo' };
+export type HistoryAction =
+  | Action
+  | { type: 'undo' }
+  | { type: 'redo' }
+  /** A co-chair changed the shared committee: adopt it, keep our local id tag, restart undo. */
+  | { type: 'sync/remote'; state: CommitteeState }
+  /** Give this laptop its id tag (kept through undo/redo and remote updates). */
+  | { type: 'sync/tag'; tag: string };
+
+/** Keep this laptop's id tag when a whole committee is swapped in. */
+function keepTag(next: CommitteeState, cur: CommitteeState): CommitteeState {
+  if (cur.clientTag === undefined || next.clientTag === cur.clientTag) return next;
+  return { ...next, clientTag: cur.clientTag };
+}
 
 export const HISTORY_LIMIT = 100;
 
@@ -32,22 +45,29 @@ export function historyReducer(h: History, action: HistoryAction): History {
     if (h.past.length === 0) return h;
     return {
       past: h.past.slice(0, -1),
-      present: restore(h.past[h.past.length - 1], h.present),
+      present: keepTag(restore(h.past[h.past.length - 1], h.present), h.present),
       future: [h.present, ...h.future],
     };
+  }
+  if (action.type === 'sync/remote') {
+    return { past: [], present: keepTag(action.state, h.present), future: [] };
+  }
+  if (action.type === 'sync/tag') {
+    if (h.present.clientTag === action.tag) return h;
+    return { ...h, present: { ...h.present, clientTag: action.tag } };
   }
   if (action.type === 'redo') {
     if (h.future.length === 0) return h;
     return {
       past: [...h.past, h.present],
-      present: restore(h.future[0], h.present),
+      present: keepTag(restore(h.future[0], h.present), h.present),
       future: h.future.slice(1),
     };
   }
   const next = reducer(h.present, action);
   if (next === h.present) return h;
   if (action.type === 'timer') return { ...h, present: next };
-  if (action.type === 'state/replace') return { past: [], present: next, future: [] };
+  if (action.type === 'state/replace') return { past: [], present: keepTag(next, h.present), future: [] };
   const past = [...h.past, h.present];
   if (past.length > HISTORY_LIMIT) past.splice(0, past.length - HISTORY_LIMIT);
   return { past, present: next, future: [] };

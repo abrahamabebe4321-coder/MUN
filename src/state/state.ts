@@ -50,6 +50,8 @@ export interface CommitteeState {
   scoring: ScoringConfig;
   debate: DebateState;
   nextId: number;
+  /** Local-only (never synced): short random tag appended to ids minted on this laptop. */
+  clientTag?: string;
 }
 
 export const DEFAULT_SPEAKER_SECONDS = 60;

@@ -67,6 +67,10 @@ The chair screen has four tabs: Debate, Motions, Resolutions and Scores. Roll ca
 7. Track draft resolutions and amendments on the Resolutions tab.
 8. Choose "End conference" in the "More" menu to get the summary.
 
+## Share with your co-chair
+
+Click **Share**, then **Create share link**, and send the link to your co-chair. Both laptops need internet. You both edit the same committee live. If two people change the exact same thing at the same moment, the last change wins. Undo only covers your own changes since your co-chair's last edit. The projector window still runs from the chair's laptop. **Stop sharing on this laptop** in the Share dialog leaves the room and keeps your local copy.
+
 ## Keyboard shortcuts
 
 | Key | Action |

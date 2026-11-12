@@ -4,6 +4,9 @@ import type { Action } from './reducer';
 import { createHistory, historyReducer } from './history';
 import { createCommittee } from './state';
 import type { CommitteeState } from './state';
+import { JoinModal } from '../sync/JoinModal';
+import { useLiveSync } from '../sync/useLiveSync';
+import type { SyncApi } from '../sync/useLiveSync';
 import { loadState, saveState, STORAGE_KEY } from './storage';
 
 interface CommitteeContextValue {
@@ -13,6 +16,7 @@ interface CommitteeContextValue {
   redo: () => void;
   canUndo: boolean;
   canRedo: boolean;
+  sync: SyncApi;
 }
 
 const CommitteeContext = createContext<CommitteeContextValue | null>(null);
@@ -33,6 +37,12 @@ export function CommitteeProvider({
   }, [history.present]);
 
   const dispatch = useCallback((a: Action) => dispatchHistory(a), []);
+  const dispatchRemote = useCallback(
+    (state: CommitteeState) => dispatchHistory({ type: 'sync/remote', state }),
+    [],
+  );
+  const dispatchTag = useCallback((tag: string) => dispatchHistory({ type: 'sync/tag', tag }), []);
+  const sync = useLiveSync(history.present, dispatchRemote, dispatchTag);
   const undo = useCallback(() => dispatchHistory({ type: 'undo' }), []);
   const redo = useCallback(() => dispatchHistory({ type: 'redo' }), []);
 
@@ -44,11 +54,19 @@ export function CommitteeProvider({
       redo,
       canUndo: history.past.length > 0,
       canRedo: history.future.length > 0,
+      sync,
     }),
-    [history, dispatch, undo, redo],
+    [history, dispatch, undo, redo, sync],
   );
 
-  return <CommitteeContext.Provider value={value}>{children}</CommitteeContext.Provider>;
+  return (
+    <CommitteeContext.Provider value={value}>
+      {children}
+      {sync.pendingJoin && (
+        <JoinModal name={sync.pendingJoin.name} onJoin={sync.confirmJoin} onCancel={sync.cancelJoin} />
+      )}
+    </CommitteeContext.Provider>
+  );
 }
 
 export function useCommittee(): CommitteeContextValue {
