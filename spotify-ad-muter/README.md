@@ -18,11 +18,15 @@ You need Python 3.8+ ([python.org](https://www.python.org/downloads/)).
 
 **Windows**
 ```bash
-pip install pycaw
+py -m pip install pycaw
 ```
 ```bash
-python spotify_ad_muter.py
+py spotify_ad_muter.py
 ```
+If Windows says "Python was not found" and points you to the Microsoft Store, that's
+a placeholder shortcut, not your real Python. Use `py` as above, or the full path to
+`python.exe` (pip prints it), or turn off the `python.exe` / `python3.exe` entries under
+Settings → Apps → Advanced app settings → App execution aliases.
 
 **macOS** (the first run asks you to let Terminal control Spotify; click OK)
 ```bash
