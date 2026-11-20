@@ -41,69 +41,165 @@ def run(cmd):
 
 # --------------------------------------------------------------------------
 # Windows: an ad is on when Spotify's window title is not "Artist - Song".
-# Muting uses Spotify's own entry in the Windows volume mixer.
+# Instead of polling, Windows notifies us the moment Spotify's title changes
+# (SetWinEventHook), and muting uses Spotify's volume-mixer entry, looked up
+# in advance so the mute itself is a single call.
 # --------------------------------------------------------------------------
 class WindowsBackend:
     SONG_TITLE = re.compile(r"\s[-–—]\s")  # "Artist - Song"
+    EVENT_OBJECT_NAMECHANGE = 0x800C
+    WINEVENT_SKIPOWNPROCESS = 0x0002
+    OBJID_WINDOW = 0
+    WM_TIMER = 0x0113
+    SAFETY_CHECK_MS = 1000     # full re-check in case an event is ever missed
+    SESSION_REFRESH_S = 5      # re-find Spotify's audio sessions (restarts, device changes)
 
     def __init__(self):
         try:
             from pycaw.pycaw import AudioUtilities
             import psutil
         except ImportError:
-            sys.exit("Missing dependency. Run:  pip install pycaw")
+            sys.exit("Missing dependency. Run:  py -m pip install pycaw")
         import ctypes
-        from ctypes import wintypes
+        from ctypes import wintypes as wt
 
-        self.ctypes, self.wintypes = ctypes, wintypes
+        self.ctypes, self.wt = ctypes, wt
         self.AudioUtilities, self.psutil = AudioUtilities, psutil
-        self.user32 = ctypes.windll.user32
-        self.WNDENUMPROC = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
 
-    def _is_spotify_pid(self, pid):
-        try:
-            return self.psutil.Process(pid).name().lower() == "spotify.exe"
-        except Exception:
+        u = ctypes.WinDLL("user32")  # private copy so our argtypes don't affect other libraries
+        self.WINEVENTPROC = ctypes.WINFUNCTYPE(None, wt.HANDLE, wt.DWORD, wt.HWND,
+                                               wt.LONG, wt.LONG, wt.DWORD, wt.DWORD)
+        self.WNDENUMPROC = ctypes.WINFUNCTYPE(wt.BOOL, wt.HWND, wt.LPARAM)
+        u.SetWinEventHook.argtypes = [wt.DWORD, wt.DWORD, wt.HMODULE, self.WINEVENTPROC,
+                                      wt.DWORD, wt.DWORD, wt.UINT]
+        u.SetWinEventHook.restype = wt.HANDLE
+        u.UnhookWinEvent.argtypes = [wt.HANDLE]
+        u.EnumWindows.argtypes = [self.WNDENUMPROC, wt.LPARAM]
+        u.GetClassNameW.argtypes = [wt.HWND, wt.LPWSTR, ctypes.c_int]
+        u.InternalGetWindowText.argtypes = [wt.HWND, wt.LPWSTR, ctypes.c_int]
+        u.GetWindowThreadProcessId.argtypes = [wt.HWND, ctypes.POINTER(wt.DWORD)]
+        u.GetMessageW.argtypes = [ctypes.POINTER(wt.MSG), wt.HWND, wt.UINT, wt.UINT]
+        u.GetMessageW.restype = wt.BOOL
+        u.TranslateMessage.argtypes = [ctypes.POINTER(wt.MSG)]
+        u.DispatchMessageW.argtypes = [ctypes.POINTER(wt.MSG)]
+        u.SetTimer.argtypes = [wt.HWND, ctypes.c_size_t, wt.UINT, ctypes.c_void_p]
+        u.SetTimer.restype = ctypes.c_size_t
+        u.KillTimer.argtypes = [wt.HWND, ctypes.c_size_t]
+        self.user32 = u
+
+        self._pid_is_spotify = {}
+        self._volumes = []
+        self._volumes_at = 0.0
+        self.refresh_sessions()
+
+    # ---- Spotify's windows -------------------------------------------------
+    def _is_spotify_window(self, hwnd):
+        ctypes, u = self.ctypes, self.user32
+        cls = ctypes.create_unicode_buffer(64)
+        u.GetClassNameW(hwnd, cls, 64)
+        if not cls.value.startswith("Chrome_WidgetWin"):  # Spotify's main window class
             return False
+        pid = self.wt.DWORD()
+        u.GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
+        pid = pid.value
+        if pid not in self._pid_is_spotify:
+            try:
+                name = self.psutil.Process(pid).name().lower()
+            except Exception:
+                name = ""
+            self._pid_is_spotify[pid] = name == "spotify.exe"
+        return self._pid_is_spotify[pid]
 
-    def _spotify_titles(self):
-        ctypes, user32 = self.ctypes, self.user32
+    def _title(self, hwnd):
+        # InternalGetWindowText reads the title Windows already has stored,
+        # so it never waits on Spotify (GetWindowText can).
+        buf = self.ctypes.create_unicode_buffer(512)
+        self.user32.InternalGetWindowText(hwnd, buf, 512)
+        return buf.value
+
+    def is_ad(self):
         titles = []
 
         def on_window(hwnd, _):
-            length = user32.GetWindowTextLengthW(hwnd)
-            if length:
-                cls = ctypes.create_unicode_buffer(64)
-                user32.GetClassNameW(hwnd, cls, 64)
-                if cls.value.startswith("Chrome_WidgetWin"):  # Spotify's main window
-                    pid = self.wintypes.DWORD()
-                    user32.GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
-                    if self._is_spotify_pid(pid.value):
-                        buf = ctypes.create_unicode_buffer(length + 1)
-                        user32.GetWindowTextW(hwnd, buf, length + 1)
-                        titles.append(buf.value)
+            if self._is_spotify_window(hwnd):
+                title = self._title(hwnd)
+                if title:
+                    titles.append(title)
             return True
 
-        user32.EnumWindows(self.WNDENUMPROC(on_window), 0)
-        return titles
-
-    def is_ad(self):
-        titles = self._spotify_titles()
+        self.user32.EnumWindows(self.WNDENUMPROC(on_window), 0)
         return bool(titles) and not any(self.SONG_TITLE.search(t) for t in titles)
 
-    def _set_mute(self, muted):
+    # ---- Spotify's audio ---------------------------------------------------
+    def refresh_sessions(self):
+        volumes = []
         for session in self.AudioUtilities.GetAllSessions():
             try:
                 if session.Process and session.Process.name().lower() == "spotify.exe":
-                    session.SimpleAudioVolume.SetMute(int(muted), None)
+                    volumes.append(session.SimpleAudioVolume)
             except Exception:
                 pass
+        self._volumes, self._volumes_at = volumes, time.monotonic()
+        self._pid_is_spotify.clear()  # process ids get reused; start fresh
+
+    def _set_mute(self, muted):
+        if not self._volumes:
+            self.refresh_sessions()
+        try:
+            for volume in self._volumes:
+                volume.SetMute(int(muted), None)
+        except Exception:  # Spotify restarted: find its new sessions and retry
+            self.refresh_sessions()
+            for volume in self._volumes:
+                try:
+                    volume.SetMute(int(muted), None)
+                except Exception:
+                    pass
 
     def mute(self):
         self._set_mute(True)
 
     def unmute(self):
         self._set_mute(False)
+
+    # ---- event loop --------------------------------------------------------
+    def run(self, controller):
+        ctypes, u = self.ctypes, self.user32
+
+        def check():
+            try:
+                controller.update(self.is_ad())
+            except Exception as e:
+                log(f"Check failed, retrying: {e}")
+
+        def on_name_change(_hook, _event, hwnd, id_object, id_child, _thread, _time):
+            # Fires for title changes in every app; bail out fast unless it's Spotify's window.
+            if id_object == self.OBJID_WINDOW and id_child == 0 and hwnd \
+                    and self._is_spotify_window(hwnd):
+                check()
+
+        callback = self.WINEVENTPROC(on_name_change)  # keep a reference while hooked
+        hook = u.SetWinEventHook(self.EVENT_OBJECT_NAMECHANGE, self.EVENT_OBJECT_NAMECHANGE,
+                                 None, callback, 0, 0, self.WINEVENT_SKIPOWNPROCESS)
+        if not hook:
+            sys.exit("Could not listen for Spotify title changes (SetWinEventHook failed).")
+        # A slow timer wakes the loop so Ctrl+C works, repeats the mute while an ad
+        # plays, and catches anything an event might have missed.
+        timer = u.SetTimer(None, 0, self.SAFETY_CHECK_MS, None)
+        check()
+        msg = self.wt.MSG()
+        try:
+            while u.GetMessageW(ctypes.byref(msg), None, 0, 0) > 0:
+                if msg.message == self.WM_TIMER:
+                    if time.monotonic() - self._volumes_at > self.SESSION_REFRESH_S:
+                        self.refresh_sessions()
+                    check()
+                else:
+                    u.TranslateMessage(ctypes.byref(msg))
+                    u.DispatchMessageW(ctypes.byref(msg))
+        finally:
+            u.KillTimer(None, timer)
+            u.UnhookWinEvent(hook)
 
 
 # --------------------------------------------------------------------------
@@ -183,6 +279,38 @@ class LinuxBackend:
         self._set_mute(False)
 
 
+class Controller:
+    """Mutes on the first sign of an ad, unmutes when it's over."""
+
+    def __init__(self, backend):
+        self.backend, self.muted = backend, False
+
+    def update(self, ad):
+        if ad:
+            self.backend.mute()  # repeated while the ad plays, in case Spotify opens a new stream
+            if not self.muted:
+                self.muted = True
+                log("Ad detected: Spotify muted")
+        elif self.muted:
+            self.backend.unmute()
+            self.muted = False
+            log("Ad over: Spotify unmuted")
+
+    def shutdown(self):
+        if self.muted:
+            self.backend.unmute()
+            log("Spotify unmuted on exit")
+
+
+def poll(backend, controller, interval):
+    while True:
+        try:
+            controller.update(backend.is_ad())
+        except Exception as e:  # e.g. Spotify closed mid-check
+            log(f"Check failed, retrying: {e}")
+        time.sleep(interval)
+
+
 def pick_backend():
     if sys.platform.startswith("win"):
         return WindowsBackend()
@@ -194,11 +322,12 @@ def pick_backend():
 def main():
     parser = argparse.ArgumentParser(description="Mute Spotify (only Spotify) during ads.")
     parser.add_argument("--interval", type=float, default=0.5,
-                        help="seconds between checks (default 0.5)")
+                        help="macOS/Linux: seconds between checks (default 0.5). "
+                             "Windows reacts instantly and ignores this.")
     args = parser.parse_args()
 
     backend = pick_backend()
-    muted = False
+    controller = Controller(backend)
 
     def stop(*_):
         raise KeyboardInterrupt
@@ -206,26 +335,14 @@ def main():
 
     log("Watching Spotify for ads. Press Ctrl+C to quit.")
     try:
-        while True:
-            try:
-                if backend.is_ad():
-                    backend.mute()  # repeated each check in case Spotify opens a new stream
-                    if not muted:
-                        log("Ad detected: Spotify muted")
-                        muted = True
-                elif muted:
-                    backend.unmute()
-                    log("Ad over: Spotify unmuted")
-                    muted = False
-            except Exception as e:  # e.g. Spotify closed mid-check
-                log(f"Check failed, retrying: {e}")
-            time.sleep(args.interval)
+        if isinstance(backend, WindowsBackend):
+            backend.run(controller)
+        else:
+            poll(backend, controller, args.interval)
     except KeyboardInterrupt:
         pass
     finally:
-        if muted:
-            backend.unmute()
-            log("Spotify unmuted on exit")
+        controller.shutdown()
 
 
 if __name__ == "__main__":

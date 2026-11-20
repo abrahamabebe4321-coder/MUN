@@ -2,7 +2,8 @@
 
 A single small Python script that mutes **only Spotify** while an ad plays and
 unmutes it when the music returns. Your other apps (browser, calls, games) keep
-their sound. It checks twice a second and uses almost no CPU or memory.
+their sound. On Windows it reacts the instant Spotify's title changes (no polling);
+on macOS and Linux it checks twice a second. Either way it uses almost no CPU or memory.
 
 ## How it works
 
@@ -39,7 +40,7 @@ python3 spotify_ad_muter.py
 ```
 
 Leave it running. Press `Ctrl+C` to quit, and it unmutes Spotify if an ad was playing.
-`--interval 0.3` makes it check more often.
+On macOS/Linux, `--interval 0.3` makes it check more often (Windows doesn't need it).
 
 ## Start it automatically at login
 
